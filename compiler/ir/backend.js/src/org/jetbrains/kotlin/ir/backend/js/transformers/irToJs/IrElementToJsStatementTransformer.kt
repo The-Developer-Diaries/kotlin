@@ -28,10 +28,14 @@ import org.jetbrains.kotlin.ir.util.render
 import org.jetbrains.kotlin.js.backend.ast.*
 import org.jetbrains.kotlin.js.backend.ast.metadata.synthetic
 import org.jetbrains.kotlin.js.backend.ast.metadata.wasMovedFromItsDeclarationPlace
+import org.jetbrains.kotlin.js.config.useEs6ConstLet
 import org.jetbrains.kotlin.utils.toSmartList
 
 @Suppress("PARAMETER_NAME_CHANGED_ON_OVERRIDE")
 class IrElementToJsStatementTransformer : BaseIrElementToJsNodeTransformer<JsStatement, JsGenerationContext>() {
+
+    private val JsGenerationContext.useConstLet: Boolean
+        get() = staticContext.backendContext.configuration.useEs6ConstLet
 
     override fun visitFunction(declaration: IrFunction, data: JsGenerationContext): JsStatement {
         irError("All functions must be already lowered") {
@@ -189,7 +193,12 @@ class IrElementToJsStatementTransformer : BaseIrElementToJsNodeTransformer<JsSta
             synthetic = syntheticVariable
             wasMovedFromItsDeclarationPlace = declaration.wasMovedFromItsDeclarationPlace
         }
-        return JsVars(JsVars.Variant.Var, variable).apply { synthetic = syntheticVariable }
+        val variant = when {
+            !context.useConstLet -> JsVars.Variant.Var
+            declaration.isVar -> JsVars.Variant.Let
+            else -> JsVars.Variant.Const
+        }
+        return JsVars(variant, variable).apply { synthetic = syntheticVariable }
     }
 
     override fun visitDelegatingConstructorCall(expression: IrDelegatingConstructorCall, context: JsGenerationContext): JsStatement {

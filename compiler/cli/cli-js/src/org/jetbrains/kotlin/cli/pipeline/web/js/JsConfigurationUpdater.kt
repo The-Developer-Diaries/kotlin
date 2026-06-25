@@ -72,6 +72,7 @@ object JsConfigurationUpdater : ConfigurationUpdater<K2JSCompilerArguments>() {
         configuration.generatePolyfills = arguments.generatePolyfills
         configuration.generateInlineAnonymousFunctions = arguments.irGenerateInlineAnonymousFunctions
         configuration.useEs6Classes = arguments.useEsClasses ?: isES2015
+        configuration.useEs6ConstLet = arguments.useEs6ConstLet
         configuration.compileSuspendAsJsGenerator = arguments.useEsGenerators ?: isES2015
         configuration.compileLambdasAsEs6ArrowFunctions = arguments.useEsArrowFunctions ?: isES2015
         configuration.compileLongAsBigint = arguments.compileLongAsBigInt ?: false
