@@ -8,6 +8,7 @@ package org.jetbrains.kotlin.backend.konan.objcexport
 import org.jetbrains.kotlin.K1Deprecation
 import org.jetbrains.kotlin.backend.konan.*
 import org.jetbrains.kotlin.backend.konan.descriptors.allOverriddenDescriptors
+import org.jetbrains.kotlin.backend.konan.descriptors.isDeserializedAndHasCompanionExtensionReceiver
 import org.jetbrains.kotlin.backend.konan.descriptors.isArray
 import org.jetbrains.kotlin.backend.konan.descriptors.isInterface
 import org.jetbrains.kotlin.builtins.*
@@ -137,10 +138,12 @@ fun ObjCExportMapper.shouldBeExposed(descriptor: CallableMemberDescriptor): Bool
 private fun AnnotationDescriptor.hidesFromObjC(): Boolean =
     annotationClass?.annotations?.any { it.fqName == KonanFqNames.hidesFromObjC } ?: false
 
+@OptIn(K1Deprecation::class)
 private fun CallableMemberDescriptor.isHiddenFromObjC(): Boolean = when {
     // Note: the front-end checker requires all overridden descriptors to be either refined or not refined.
     overriddenDescriptors.isNotEmpty() -> overriddenDescriptors.first().isHiddenFromObjC()
     contextReceiverParameters.isNotEmpty() -> true
+    isDeserializedAndHasCompanionExtensionReceiver -> true
     else -> annotations.any(AnnotationDescriptor::hidesFromObjC)
 }
 
