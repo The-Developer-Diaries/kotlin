@@ -121,6 +121,10 @@ internal class PostInlineLowering(val context: Context) : BodyLoweringPass {
                     }
                 }
 
+                if (symbols.asserts.contains(expression.symbol) && !context.config.assertsEnabled) {
+                    return data.at(expression).irComposite {}
+                }
+
                 return expression
             }
 
