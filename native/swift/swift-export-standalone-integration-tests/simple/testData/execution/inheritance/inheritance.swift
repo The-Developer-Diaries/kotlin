@@ -293,3 +293,62 @@ func swiftOverridesKotlinInterfaceDefaultProperty() throws {
     #expect(l.display == "swift-display(b2)")
     #expect(readDisplay(l: l) == "swift-display(b2)")
 }
+
+enum MySwiftError: Error {
+    case boom(String)
+}
+
+@Test
+func swiftReverseThrowSurfacesToKotlin() throws {
+    // A Swift override of a @Throws Kotlin method throws a Swift error; a Kotlin caller must observe
+    // a thrown exception (not a trap), with the message preserved.
+    class BadThrower: Thrower {
+        override func mightThrow(prefix: String) throws -> String {
+            throw MySwiftError.boom("swift-boom:" + prefix)
+        }
+    }
+    #expect(callMightThrowCatching(t: BadThrower(), prefix: "p").contains("swift-boom:p"))
+
+    // A Swift override that does NOT throw still returns normally through the reverse bridge.
+    class GoodThrower: Thrower {
+        override func mightThrow(prefix: String) throws -> String { prefix + "-swift-ok" }
+    }
+    #expect(callMightThrowCatching(t: GoodThrower(), prefix: "p") == "ok:p-swift-ok")
+
+    // Original Kotlin implementation unaffected.
+    #expect(callMightThrowCatching(t: Thrower(), prefix: "p") == "ok:p-kotlin-ok")
+}
+
+@Test
+func kotlinExceptionRoundTripsThroughSwiftOverride() throws {
+    // Round-trip A (the "E3" gap): a Swift override calls `super` (a @Throws Kotlin method that
+    // throws). Letting it propagate, the Kotlin caller must receive the ORIGINAL Kotlin exception —
+    // identity and message preserved — not a generic re-wrap.
+    class Propagator: SuperThrower {
+        override func boom() throws -> String {
+            return try super.boom() // Kotlin throws MyKotlinException("kotlin-boom")
+        }
+    }
+    #expect(callBoomCatching(s: Propagator()) == "kotlin-exception:kotlin-boom")
+    // Original Kotlin instance also yields the Kotlin exception.
+    #expect(callBoomCatching(s: SuperThrower()) == "kotlin-exception:kotlin-boom")
+}
+
+@Test
+func swiftErrorRoundTripsBackToSwift() throws {
+    // Round-trip B: a Swift override throws a Swift error; a @Throws Kotlin relay propagates it back
+    // out to Swift, where it must arrive as the SAME Swift error type/value (forward SwiftError unwrap).
+    class ThrowingRelayer: Relayer {
+        override func relay() throws -> String { throw MySwiftError.boom("round-trip") }
+    }
+    do {
+        _ = try callRelay(r: ThrowingRelayer())
+        Issue.record("expected callRelay to throw")
+    } catch let error as MySwiftError {
+        guard case .boom(let message) = error else {
+            Issue.record("unexpected MySwiftError case")
+            return
+        }
+        #expect(message == "round-trip")
+    }
+}
