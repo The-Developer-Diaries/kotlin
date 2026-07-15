@@ -8,6 +8,7 @@ package org.jetbrains.kotlin.code.review
 interface RenderingContext {
     fun codeLink(path: ProjectFilePath, line: Int): String
     fun markdownLink(path: ProjectFilePath, title: String): String
+    fun localLink(text: String, title: String): String?
     fun describeDiff(origin: GitDiff.Origin): String
 
     fun ruleLink(rule: CodeRule): String = markdownLink(rule.source, rule.name)
@@ -124,10 +125,11 @@ private fun StringBuilder.appendMeta(review: ReviewResult) = appendCollapsed("Me
             is AgentResult.Failure -> WARNING_EMOJI
             is AgentResult.Success -> {
                 val count = result.reviewResult.comments.size
+                val countString = count.toString()
                 if (count == 0) {
-                    "0"
+                    countString
                 } else {
-                    "[$count](#${slugifyMarkdownTitle(rule.name)})"
+                    renderingContext.localLink(countString, rule.name) ?: countString
                 }
             }
         }

@@ -21,7 +21,13 @@ suspend fun main(args: Array<String>) {
 
     val reviewResult = runReview(gitTree, GitRevision(baseRefString), agent)
 
-    writeLocalReport(output, gitTree.project, reviewResult)
+    val headSha1 = GitCLI.revParse(gitTree, GitRevision("HEAD"))
+
+    val repository = "JetBrains/kotlin" // FIXME
+    val text = with(GitHubRenderingContext(repository, headSha1)) {
+        render(reviewResult)
+    }
+    output.writeText(text)
 
     val outputUrl = output.toURI().toURL()
 
@@ -36,11 +42,25 @@ suspend fun main(args: Array<String>) {
     println(outputUrl)
 }
 
-private fun writeLocalReport(output: File, project: LocalProject, reviewResult: ReviewResult) {
-    val text = with(LocalRenderingContext(output, project)) {
-        render(reviewResult)
+private class GitHubRenderingContext(val repository: String, val sha1: GitSHA1) : RenderingContext {
+    override fun codeLink(path: ProjectFilePath, line: Int): String {
+        return "[${path.fileName}](https://github.com/$repository/blob/${sha1.sha1}/$path?plain=1#L$line)"
     }
-    output.writeText(text)
+
+    override fun markdownLink(path: ProjectFilePath, title: String): String {
+        return "[${path.fileName}](https://github.com/$repository/blob/${sha1.sha1}/$path#${slugifyMarkdownTitle(title)})"
+    }
+
+    override fun localLink(text: String, title: String): String? {
+        // When posting Markdown as a GitHub comment, it is tricky to have a link to a title in the same comment.
+        // Let's keep it unsupported for now.
+        return null
+    }
+
+    override fun describeDiff(origin: GitDiff.Origin): String = when (origin) {
+        is GitDiff.Origin.Local ->
+            "[${origin.from.sha1}...${sha1.sha1}](https://github.com/$repository/compare/${origin.from.sha1}...${sha1.sha1})"
+    }
 }
 
 private class LocalRenderingContext(output: File, project: LocalProject) : RenderingContext {
@@ -59,6 +79,11 @@ private class LocalRenderingContext(output: File, project: LocalProject) : Rende
         val fileUrl = path.pathRelativeToOutput
         val anchor = slugifyMarkdownTitle(title)
         return "[$title]($fileUrl#$anchor)"
+    }
+
+    override fun localLink(text: String, title: String): String {
+        val anchor = slugifyMarkdownTitle(title)
+        return "[$text](#$anchor)"
     }
 
     override fun describeDiff(origin: GitDiff.Origin): String {

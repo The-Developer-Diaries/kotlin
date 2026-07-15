@@ -97,4 +97,8 @@ object GitCLI : LocalGit {
 
     override suspend fun lsFiles(tree: GitWorkingTree): List<ProjectFilePath> =
         gitOutput(tree, "ls-files").lines().map { ProjectFilePath(it) }
+
+    suspend fun revParse(tree: GitWorkingTree, revision: GitRevision): GitSHA1 = GitSHA1(
+        gitOutput(tree, "rev-parse", revision.rev)
+    )
 }
