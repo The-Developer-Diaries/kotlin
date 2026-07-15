@@ -14,7 +14,7 @@ suspend fun main(args: Array<String>) {
 
     val output = File(args[0])
     val repoRoot = File(args[1])
-    val baseRefString = args.getOrNull(2) ?: "origin/master"
+    val baseRefString = args.getOrNull(2) ?: "cf4e556a02d9c1cb67d19c2422fdae02c743c499" // FIXME
 
     val gitTree = GitWorkingTree(repoRoot, GitCLI)
     val agent = LocalClaudeAgent.create(gitTree.project)
