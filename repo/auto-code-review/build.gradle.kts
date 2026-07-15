@@ -50,7 +50,7 @@ tasks.register<CodeReviewTask>("reviewCode") {
     classpath(sourceSets.named("main").map { it.compileClasspath })
     mainClass.set("org.jetbrains.kotlin.code.review.LocalKt")
 
-    val output = layout.buildDirectory.file("review.md")
+    val output = layout.buildDirectory.file("reports/review/review.md")
     val rootDir = rootDir
 
     outputs.file(output)
