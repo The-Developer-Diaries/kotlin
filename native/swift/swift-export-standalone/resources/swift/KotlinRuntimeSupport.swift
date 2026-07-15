@@ -16,6 +16,10 @@ public struct KotlinError: Error & CustomStringConvertible {
 }
 
 package func kotlinThrowableRCRef(for error: any Error) -> UnsafeMutableRawPointer {
+    if let kotlinBase = error as? KotlinRuntime.KotlinBase {
+        return SwiftError_retainedThrowableRef(kotlinBase.__externalRCRef())
+    }
+
     if let kotlinError = error as? KotlinError {
         return SwiftError_retainedThrowableRef(kotlinError.wrapped.__externalRCRef())
     }
@@ -25,11 +29,13 @@ package func kotlinThrowableRCRef(for error: any Error) -> UnsafeMutableRawPoint
 
 package func raiseKotlinError(_ outError: UnsafeMutableRawPointer?) throws {
     guard let outError = outError else { return }
-    let wrapper = KotlinRuntime.KotlinBase.__createClassWrapper(externalRCRef: outError)!
-    if let errorObject = SwiftError_unwrapBoxOrNull(wrapper.__externalRCRef()) {
-        throw Unmanaged<AnyObject>.fromOpaque(errorObject).takeUnretainedValue() as! any Error
+    if let boxedError = SwiftError_unwrapBoxOrNull(outError) {
+        let swiftError = Unmanaged<AnyObject>.fromOpaque(boxedError).takeUnretainedValue() as! any Error
+        KotlinBridgeable_disposeRef(outError)
+        throw swiftError
     }
-    throw KotlinError(wrapped: wrapper)
+    let wrapper = KotlinRuntime.KotlinBase.__createClassWrapper(externalRCRef: outError)!
+    throw (wrapper as? any Error) ?? KotlinError(wrapped: wrapper)
 }
 
 public protocol SealedType {
