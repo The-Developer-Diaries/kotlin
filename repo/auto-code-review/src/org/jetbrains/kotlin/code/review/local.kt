@@ -44,11 +44,11 @@ suspend fun main(args: Array<String>) {
 
 private class GitHubRenderingContext(val repository: String, val sha1: GitSHA1) : RenderingContext {
     override fun codeLink(path: ProjectFilePath, line: Int): String {
-        return "[${path.fileName}](https://github.com/$repository/blob/${sha1.sha1}/$path?plain=1#L$line)"
+        return "[${path.fileName}:$line](https://github.com/$repository/blob/${sha1.sha1}/$path?plain=1#L$line)"
     }
 
     override fun markdownLink(path: ProjectFilePath, title: String): String {
-        return "[${path.fileName}](https://github.com/$repository/blob/${sha1.sha1}/$path#${slugifyMarkdownTitle(title)})"
+        return "[$title](https://github.com/$repository/blob/${sha1.sha1}/$path#${slugifyMarkdownTitle(title)})"
     }
 
     override fun localLink(text: String, title: String): String? {
