@@ -1,4 +1,5 @@
 @_implementationOnly import KotlinRuntimeSupportBridge
+import Foundation
 import KotlinRuntime
 
 public struct KotlinError: Error & CustomStringConvertible {
@@ -12,6 +13,23 @@ public struct KotlinError: Error & CustomStringConvertible {
         return __root____getExceptionMessage__TypesOfArguments__ExportedKotlinPackages_kotlin_Exception__(self.wrapped.__externalRCRef())
             ?? "KotlinException(\(self.wrapped.description))"
     }
+}
+
+package func kotlinThrowableRCRef(for error: any Error) -> UnsafeMutableRawPointer {
+    if let kotlinError = error as? KotlinError {
+        return SwiftError_retainedThrowableRef(kotlinError.wrapped.__externalRCRef())
+    }
+    let errorObject = error as AnyObject
+    return SwiftError_create(Unmanaged.passUnretained(errorObject).toOpaque())
+}
+
+package func raiseKotlinError(_ outError: UnsafeMutableRawPointer?) throws {
+    guard let outError = outError else { return }
+    let wrapper = KotlinRuntime.KotlinBase.__createClassWrapper(externalRCRef: outError)!
+    if let errorObject = SwiftError_unwrapBoxOrNull(wrapper.__externalRCRef()) {
+        throw Unmanaged<AnyObject>.fromOpaque(errorObject).takeUnretainedValue() as! any Error
+    }
+    throw KotlinError(wrapped: wrapper)
 }
 
 public protocol SealedType {

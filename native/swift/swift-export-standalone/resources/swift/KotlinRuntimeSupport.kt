@@ -6,6 +6,7 @@ import kotlin.native.internal.ExportedBridge
 import platform.Foundation.NSError
 import platform.Foundation.NSLocalizedFailureReasonErrorKey
 import platform.Foundation.NSUnderlyingErrorKey
+import platform.darwin.NSObject
 
 public class SwiftException(error: NSError) : RuntimeException(
     message = buildMessage(error),
@@ -35,6 +36,43 @@ public class SwiftException(error: NSError) : RuntimeException(
             }
         }
     }
+}
+
+/**
+ * Universal Kotlin wrapper for a Swift error that crosses into Kotlin through a reverse bridge.
+ * This is the symmetric counterpart of the Swift `KotlinError` struct.
+ */
+public class SwiftError internal constructor(
+    internal val box: NSObject,
+) : RuntimeException() {
+    override val message: String? get() = box.description()
+}
+
+public fun throwErrorFromReverseBridge(errorRef: kotlinx.cinterop.COpaquePointer?) {
+    if (errorRef == null) return
+    val ref = errorRef.rawValue
+    val throwable = kotlin.native.internal.ref.dereferenceExternalRCRef(ref) as kotlin.Throwable
+    kotlin.native.internal.ref.releaseExternalRCRef(ref)
+    kotlin.native.internal.ref.disposeExternalRCRef(ref)
+    throw throwable
+}
+
+@ExportedBridge("SwiftError_create")
+public fun SwiftError_create(box: kotlin.native.internal.NativePtr): kotlin.native.internal.NativePtr {
+    val boxObject = interpretObjCPointer<NSObject>(box)
+    return kotlin.native.internal.ref.createRetainedExternalRCRef(SwiftError(boxObject))
+}
+
+@ExportedBridge("SwiftError_retainedThrowableRef")
+public fun SwiftError_retainedThrowableRef(ref: kotlin.native.internal.NativePtr): kotlin.native.internal.NativePtr {
+    val throwable = kotlin.native.internal.ref.dereferenceExternalRCRef(ref)
+    return kotlin.native.internal.ref.createRetainedExternalRCRef(throwable)
+}
+
+@ExportedBridge("SwiftError_unwrapBoxOrNull")
+public fun SwiftError_unwrapBoxOrNull(ref: kotlin.native.internal.NativePtr): kotlin.native.internal.NativePtr {
+    val throwable = kotlin.native.internal.ref.dereferenceExternalRCRef(ref)
+    return (throwable as? SwiftError)?.box?.objcPtr() ?: kotlin.native.internal.NativePtr.NULL
 }
 
 @ExportedBridge("__root____getExceptionMessage__TypesOfArguments__ExportedKotlinPackages_kotlin_Exception__")
