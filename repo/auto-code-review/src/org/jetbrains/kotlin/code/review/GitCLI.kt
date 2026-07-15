@@ -28,6 +28,7 @@ object GitCLI : LocalGit {
             command = listOf("git") + arguments
         )
         executionResult.checkExitCode()
+        println("STDERR: ${executionResult.stderr}")
         return executionResult.stdout
     }
 
@@ -50,10 +51,14 @@ object GitCLI : LocalGit {
             val firstLine = diffLines.first()
             check(firstLine.startsWith(DIFF_MINUS_MINUS_GIT)) {
                 """
-                    |In the `git diff` output,
-                    |expected a line starting with "$DIFF_MINUS_MINUS_GIT", but got:
-                    |$firstLine
-                """.trimMargin()
+In the `git diff` output,
+expected a line starting with "$DIFF_MINUS_MINUS_GIT", but got:
+$firstLine
+Full output:
+```
+$diffText
+```
+                """
             }
 
             val changedFileLines = listOf(diffLines.removeFirst()) +
