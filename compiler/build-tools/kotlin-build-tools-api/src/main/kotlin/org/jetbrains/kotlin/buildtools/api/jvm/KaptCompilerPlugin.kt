@@ -78,6 +78,14 @@ public interface KaptCompilerPlugin {
          */
         @JvmField
         public val STUBS_OUTPUT_DIR: Option<Path?> = Option("stubs", KotlinReleaseVersion(2, 5, 0))
+
+        /**
+         * Output path for Java stubs.
+         */
+        @JvmField
+        public val PROJECT_DIR: Option<Path?> = Option("stubs", KotlinReleaseVersion(2, 5, 0))
+
+
     }
 
     @ExperimentalBuildToolsApi
