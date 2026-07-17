@@ -3,40 +3,7 @@
 import kotlinx.cinterop.*
 import kotlinx.cinterop.internal.convertBlockPtrToKotlinFunction
 import kotlin.native.internal.ExportedBridge
-import platform.Foundation.NSError
-import platform.Foundation.NSLocalizedFailureReasonErrorKey
-import platform.Foundation.NSUnderlyingErrorKey
 import platform.darwin.NSObject
-
-public class SwiftException(error: NSError) : RuntimeException(
-    message = buildMessage(error),
-    cause = (error.userInfo[NSUnderlyingErrorKey] as? NSError)?.let(::SwiftException)
-) {
-    companion object {
-        private fun buildMessage(error: NSError): String {
-            val description = error.localizedDescription
-
-            val details = buildList {
-                add("domain=${error.domain}")
-                add("code=${error.code}")
-
-                ((error.userInfo[NSLocalizedFailureReasonErrorKey] as? String)
-                    ?: error.localizedFailureReason)
-                    ?.takeUnless(String::isBlank)
-                    ?.let { add("reason=$it") }
-            }
-
-            return buildString {
-                append(description)
-                if (details.isNotEmpty()) {
-                    append(" (")
-                    append(details.joinToString())
-                    append(')')
-                }
-            }
-        }
-    }
-}
 
 /**
  * Universal Kotlin wrapper for a Swift error that crosses into Kotlin through a reverse bridge.
@@ -48,13 +15,16 @@ public class SwiftError internal constructor(
     override val message: String? get() = box.description()
 }
 
-public fun throwErrorFromReverseBridge(errorRef: kotlinx.cinterop.COpaquePointer?) {
-    if (errorRef == null) return
-    val ref = errorRef.rawValue
+public fun throwableFromReverseBridge(ref: kotlin.native.internal.NativePtr): kotlin.Throwable {
     val throwable = kotlin.native.internal.ref.dereferenceExternalRCRef(ref) as kotlin.Throwable
     kotlin.native.internal.ref.releaseExternalRCRef(ref)
     kotlin.native.internal.ref.disposeExternalRCRef(ref)
-    throw throwable
+    return throwable
+}
+
+public fun throwErrorFromReverseBridge(errorRef: kotlinx.cinterop.COpaquePointer?) {
+    if (errorRef == null) return
+    throw throwableFromReverseBridge(errorRef.rawValue)
 }
 
 @ExportedBridge("SwiftError_create")

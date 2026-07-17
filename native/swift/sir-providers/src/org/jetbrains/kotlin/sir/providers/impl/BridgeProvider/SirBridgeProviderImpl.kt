@@ -86,13 +86,7 @@ public class SirBridgeProviderImpl(private val session: SirSession, private val 
             extensionReceiverParameter = extensionReceiverParameter?.let { bridgeParameter(it, 0) },
             errorParameter = run {
                 isAsync.ifTrue {
-                    Bridge.AsOptionalWrapper(
-                        Bridge.AsObject(
-                            swiftType = KotlinRuntimeModule.kotlinBase.nominalType(),
-                            kotlinType = KotlinType.KotlinObject,
-                            cType = CType.Object
-                        )
-                    )
+                    Bridge.AsOptionalWrapper(Bridge.AsError())
                 } ?: errorParameter?.let {
                     Bridge.AsOutError
                 }

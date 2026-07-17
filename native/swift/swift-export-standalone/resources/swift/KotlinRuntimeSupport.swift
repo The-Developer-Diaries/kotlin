@@ -38,6 +38,13 @@ package func raiseKotlinError(_ outError: UnsafeMutableRawPointer?) throws {
     throw (wrapper as? any Error) ?? KotlinError(wrapped: wrapper)
 }
 
+package func swiftError(fromKotlinThrowable wrapper: KotlinRuntime.KotlinBase) -> any Error {
+    if let boxedError = SwiftError_unwrapBoxOrNull(wrapper.__externalRCRef()) {
+        return Unmanaged<AnyObject>.fromOpaque(boxedError).takeUnretainedValue() as! any Error
+    }
+    return (wrapper as? any Error) ?? KotlinError(wrapped: wrapper)
+}
+
 public protocol SealedType {
     associatedtype T
     var value: T { get }
