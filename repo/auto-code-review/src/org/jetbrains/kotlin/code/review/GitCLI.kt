@@ -43,6 +43,12 @@ object GitCLI : LocalGit {
 
     override suspend fun getDiff(from: GitSHA1, to: GitWorkingTree): GitDiff {
         val diffText = gitOutput(tree = to, "diff", from.sha1)
+        val changedFiles = parseDiffText(diffText)
+
+        return GitDiff(changedFiles, GitDiff.Origin.Local(from, to))
+    }
+
+    fun parseDiffText(diffText: String): List<GitDiff.ChangedFile> {
         val diffLines = ArrayDeque(diffText.lines())
 
         val changedFiles = mutableListOf<GitDiff.ChangedFile>()
@@ -67,7 +73,7 @@ $diffText
             changedFiles.add(parseChangedFile(changedFileLines))
         }
 
-        return GitDiff(changedFiles, GitDiff.Origin.Local(from, to))
+        return changedFiles
     }
 
     private const val DIFF_SRC_LINE_PREFIX = "--- "
