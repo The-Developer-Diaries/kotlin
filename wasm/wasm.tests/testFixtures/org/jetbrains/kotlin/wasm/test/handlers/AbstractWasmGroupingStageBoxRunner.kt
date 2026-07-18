@@ -8,6 +8,8 @@ package org.jetbrains.kotlin.wasm.test.handlers
 import org.jetbrains.kotlin.test.NonGroupingStageOutput
 import org.jetbrains.kotlin.test.WrappedException
 import org.jetbrains.kotlin.test.checkTestInfrastructure
+import org.jetbrains.kotlin.test.grouping.GroupedTestsResultProtocol
+import org.jetbrains.kotlin.test.grouping.TestRunChecks
 import org.jetbrains.kotlin.test.groupingStageInputs
 import org.jetbrains.kotlin.test.isSingleTestBatch
 import org.jetbrains.kotlin.test.model.ArtifactKinds
@@ -19,18 +21,17 @@ import org.jetbrains.kotlin.test.services.moduleStructure
 import org.jetbrains.kotlin.test.services.sourceProviders.MainFunctionForBlackBoxTestsSourceProvider
 import org.jetbrains.kotlin.test.services.testInfo
 import org.jetbrains.kotlin.wasm.test.blackbox.computeProxyLauncherClassName
-import org.jetbrains.kotlin.wasm.test.providers.WasmJsLauncherAdditionalSourceProvider
 
 /**
  * Shared base class for grouping stage handlers in WASM test infrastructure.
  *
  * Encapsulates code common to JS and WASI folder-based grouped runs:
  *   - dispatching test execution to VMs and collecting their outputs/exceptions;
- *   - on the failure path, parsing TeamCity `##teamcity[testFailed` lines from VM stdout
- *     and re-attributing failures to per-test grouping inputs via their
- *     [NonGroupingStageOutput.catchingExecutor];
- *   - on the success path, sanity-checking that every batched test produced its
- *     `##teamcity[testSuiteFinished` line via [verifyAllExpectedSuitesFinished].
+ *   - re-attributing per-test results to the individual grouping inputs via their
+ *     [NonGroupingStageOutput.catchingExecutor], using the structured result block printed by the launcher's
+ *     result-collecting driver (see [GroupedTestsResultProtocol]) instead of scraping TeamCity service messages.
+ *     A test whose stable `ProxyLauncher_<hash>` id is missing from the reported results is failed with a
+ *     sanity error, which also guards against a test being silently skipped.
  */
 abstract class AbstractWasmGroupingStageBoxRunner(
     testServices: TestServices
@@ -43,19 +44,10 @@ abstract class AbstractWasmGroupingStageBoxRunner(
         get() = ArtifactKinds.Wasm
 
     /**
-     * Holder for a single VM-execution result: the captured stdout (if the run succeeded)
-     * and any exception thrown by the VM wrapper (if the run failed or detected a failure
-     * in the output).
-     */
-    protected data class RunResult(
-        val collectedOutputs: List<String>,
-        val exceptions: List<Throwable>,
-    )
-
-    /**
      * Determines whether to use
      * - box-export mode: call `box()` directly and expect "OK" return value or
-     * - unit-test mode: use the unit-test runner with TeamCity markers.
+     * - unit-test mode: run the batch via the result-collecting driver and parse the structured
+     *   [GroupedTestsResultProtocol] block from VM stdout.
      */
     protected abstract fun shouldUseBoxExportMode(): Boolean
 
@@ -64,7 +56,7 @@ abstract class AbstractWasmGroupingStageBoxRunner(
      *
      * @param artifact the compiled WASM artifact to execute
      * @param useUnitTestRunnerOnly if true, use the unit-test runner; if false, call `box()` directly
-     * @param outputCollector if non-null, collects stdout from VM executions (for TeamCity marker parsing)
+     * @param outputCollector if non-null, collects stdout from VM executions (for [GroupedTestsResultProtocol] parsing)
      * @return list of exceptions thrown during test execution
      */
     protected abstract fun runTestCode(
@@ -85,135 +77,221 @@ abstract class AbstractWasmGroupingStageBoxRunner(
                 outputCollector = null,
             )
             if (exceptions.isNotEmpty()) {
-                input.catchingExecutor.executeWithCatching({ WrappedException.FromGroupingHandler(it, this) }) {
-                    throw exceptions.first()
-                }
+                input.failWith(exceptions.first())
             }
         } else {
-            // Unit test mode: use unit-test runner with TeamCity markers
+            // Unit test mode: run the batch and parse the structured GroupedTestsResultProtocol block from stdout.
             val collectedOutputs = mutableListOf<String>()
             val exceptions = runTestCode(
                 artifact,
                 useUnitTestRunnerOnly = true,
                 outputCollector = collectedOutputs,
             )
-            handleRunResult(RunResult(collectedOutputs, exceptions))
-        }
-    }
-
-    protected fun handleRunResult(runResult: RunResult) {
-        val (collectedOutputs, exceptions) = runResult
-
-        if (exceptions.isEmpty()) {
-            // Sanity check on the success path: every batched test must have its corresponding
-            // `##teamcity[testSuiteFinished name='<...>'` line in at least one VM's stdout. A
-            // missing line indicates that the per-test launcher class was optimized away, never
-            // linked, or otherwise not picked up by the test runner — which would silently mask
-            // a real test execution failure as "all tests passed".
-            verifyAllExpectedSuitesFinished(collectedOutputs)
-            return
-        }
-
-        val failuresBySuiteName = mutableMapOf<String, WasmTestFailure>()
-        for (throwable in exceptions) {
-            val message = throwable.message ?: continue
-            val output = if (message.contains("OUTPUT:\n")) {
-                message.substringAfter("OUTPUT:\n").substringBefore("\n---")
-            } else if (message.contains("Output:\n")) {
-                message.substringAfter("Output:\n")
-            } else {
-                continue
-            }
-            failuresBySuiteName.putAll(parseTeamCityFailures(output))
-        }
-
-        if (failuresBySuiteName.isEmpty()) {
-            throw exceptions.first()
-        }
-
-        for (input in testServices.groupingStageInputs) {
-            val expectedSuiteNames = computeExpectedSuiteNames(input)
-            val failure = expectedSuiteNames.firstNotNullOfOrNull { failuresBySuiteName[it] }
-            if (failure != null) {
-                input.catchingExecutor.executeWithCatching({ WrappedException.FromGroupingHandler(it, this) }) {
-                    throw AssertionError(failure.message + "\n" + failure.details)
-                }
-            }
+            handleRunResult(collectedOutputs = collectedOutputs, exceptions = exceptions)
         }
     }
 
     /**
-     * Verifies that every test in the grouped batch produced a `##teamcity[testSuiteFinished
-     * name='<expected>'` line in at least one VM's captured stdout. If a test's suite line is
-     * missing across all collected outputs, the corresponding grouping input is failed via its
-     * [NonGroupingStageOutput.catchingExecutor] so that JUnit attributes the failure to the
-     * specific test rather than to the whole batch.
-     *
-     * The collector receives an entry per successful VM invocation; tests that fail in a VM
-     * (returning a non-null [Throwable]) do not contribute output here — the failure-path code
-     * above continues to handle them.
+     * @param collectedOutputs the stdout captured from every VM that finished normally
+     * @param exceptions whatever the VM wrappers threw (a failed run, or a failure detected in the output)
      */
-    private fun verifyAllExpectedSuitesFinished(collectedOutputs: List<String>) {
-        // For each VM output, collect suite names that were finished.
-        val finishedSuitesPerOutput: List<Set<String>> = collectedOutputs.map { output ->
-            val finished = mutableSetOf<String>()
-            for (rawLine in output.lines()) {
-                val line = rawLine.trim()
-                if (!line.startsWith("##teamcity[testSuiteFinished")) continue
-                val nameStart = line.indexOf("name='")
-                if (nameStart < 0) continue
-                val nameEnd = line.indexOf("'", nameStart + "name='".length)
-                if (nameEnd < 0) continue
-                finished += line.substring(nameStart + "name='".length, nameEnd)
-            }
-            finished
+    private fun handleRunResult(collectedOutputs: List<String>, exceptions: List<Throwable>) {
+        // Collect every text that may carry the structured result block: stdout of VMs that finished normally
+        // (collectedOutputs) plus any VM-failure exception messages, which embed the captured stdout — so a
+        // partial block from a VM that crashed mid-batch is still recovered.
+        val texts = buildList {
+            addAll(collectedOutputs)
+            exceptions.forEach { throwable -> addAll(collectExceptionTexts(throwable)) }
         }
-        // A suite is considered finished if at least one VM reported it.
-        val unionFinished: Set<String> = finishedSuitesPerOutput.fold(emptySet()) { acc, s -> acc + s }
 
-        // Skip single-test batches. A batch that contains a single test is not executed via the
-        // JUnit/unit-test runner (no batched `ProxyLauncher`/`Launcher` suite is driven for it);
-        // instead it is run by directly invoking its `box()` function and asserting `"OK"`, exactly
-        // like the standalone `FirWasmJsCodegenBoxTestGenerated` / `WasmBoxRunner` — regardless of
-        // why it ended up alone in the batch (isolated, or merely a unique batch token). Such a run
-        // does not emit `##teamcity[testSuiteFinished` markers, so the suite-finished sanity check
-        // does not apply — its pass/fail status is determined solely by the `box()` result (handled
-        // on the failure path above).
-        if (testServices.isSingleTestBatch())
+        val parsedBatchResult = GroupedTestsResultProtocol.parseMerged(texts)
+
+        if (parsedBatchResult.sawStructuredBlock) {
+            attributeStructuredResults(parsedBatchResult, exceptions, texts)
             return
+        }
 
-        for (input in testServices.groupingStageInputs) {
-            // Make sure all grouped tests have `box()` function in any of their modules.
-            // Otherwise, tests must be driven by a custom JS entry point (e.g. `entry.mjs`) rather than by the unit-test runner, so must be isolated,
-            // since they do not produce `##teamcity[testSuiteFinished` lines and their pass / fail status is determined entirely
-            // by whether the VM throws when executing the custom entry script.
-            checkTestInfrastructure(hasBoxMethod(input)) {
-                "Test ${input.testInfo} does not have box() method, so its execution status cannot be verified via '##teamcity' output lines. " +
-                        "Please isolate this test using either existing ways in WasmGroupingTestIsolator or add a new rule there."
-            }
-            val expectedSuiteNames = computeExpectedSuiteNames(input)
-            if (expectedSuiteNames.any { it in unionFinished }) continue
-
-            input.catchingExecutor.executeWithCatching({ WrappedException.FromGroupingHandler(it, this) }) {
-                throw AssertionError("""
-                    Sanity check failed: none of the expected '##teamcity[testSuiteFinished name=<...>' lines were found in the VM output of the grouped batch.
-                    Expected one of: $expectedSuiteNames. The test was expected to run as part of the batch, but its TeamCity suite was not finished.
-                    This typically indicates the test was silently skipped by the unit test runner (e.g. due to a missing @Test annotation,
-                    a stripped ProxyLauncher class, or a runtime error before this test's class was reached).
-                    Collected outputs:
-                    """.trimIndent() + collectedOutputs
+        // A grouped batch always generates the result-collecting driver, so a batch of several tests reaching this
+        // point means the driver was never invoked: `test.mjs` did not find its exported entry point and fell back
+        // to the compiler's `startUnitTests()`, which finds nothing to run now that the launcher classes carry no
+        // `@kotlin.test.Test`. That reports no failure and exits cleanly, so nothing here would fail and the whole
+        // batch would be reported green without a single test having run. Fail every test of the batch instead —
+        // the same guarantee the `##teamcity[testSuiteFinished` sanity check used to give.
+        if (!testServices.isSingleTestBatch()) {
+            testServices.groupingStageInputs.forEach { input ->
+                input.failWithCollectedOutputs(
+                    texts,
+                    "Sanity check failed: the grouped batch printed no '${GroupedTestsResultProtocol.BEGIN}' block, " +
+                            "so not a single test reported a result. The launcher's result-collecting driver was " +
+                            "never invoked — most likely its exported entry point " +
+                            "(`runGroupedTests` on wasm-js, `startTest` on wasm-wasi) was missing or renamed, which " +
+                            "means no test of this batch actually ran.",
                 )
             }
+            return
         }
+
+        // A single isolated test: no driver is generated for it, so a missing block is expected. There is nothing to
+        // demux either — any VM failure is unambiguously that test's own, and its pass verdict comes from the
+        // `box()`/`hasTestFailures` checks in the launcher glue, which make the VM exit non-zero on failure.
+        if (exceptions.isNotEmpty()) {
+            testServices.groupingStageInputs.forEach { it.failWith(exceptions.first()) }
+        }
+    }
+
+
+    /**
+     * Attributes structured per-test results back to the individual grouping inputs via their
+     * [NonGroupingStageOutput.catchingExecutor], so JUnit reports each failure against the specific test rather
+     * than against the whole batch. A test whose stable `ProxyLauncher_<hash>` id is absent from the parsed outcomes
+     * is failed with a sanity error: it was expected to run in the batch but produced no result line. The message
+     * distinguishes a test that crashed the VM mid-run (a `STARTED` line with no terminal result — see
+     * [GroupedTestsResultProtocol.ParsedBatchResult.crashedInProgress]) from one that never ran at all (neither a
+     * start nor a result, e.g. a stripped launcher) — which also prevents a silently-skipped test from
+     * masquerading as passing.
+     *
+     * A test that crashed a VM is failed even when another VM ran it to completion: the batch executes on several
+     * engines, and `crashedInProgress` is tracked per VM output, so a pass on one engine cannot hide a hard trap
+     * on another.
+     */
+    private fun attributeStructuredResults(
+        parsedBatchResult: GroupedTestsResultProtocol.ParsedBatchResult,
+        exceptions: List<Throwable>,
+        texts: List<String>,
+    ) {
+        val results = parsedBatchResult.outcomes
+        val testReport = parsedBatchResult.toTestReport()
+        var anyFailureAttributed = false
+        val expectedIds = testServices.groupingStageInputs.map { input ->
+            computeProxyLauncherClassName(input.testServices.testInfo)
+        }
+        // When not a single test reported a result, the batch as a whole is broken rather than one test being
+        // skipped. There is no batch-level failure sink, so the reason is prepended to every missing test below.
+        val emptyReportReason = (TestRunChecks.checkNonEmpty(testReport) as? TestRunChecks.Result.Failed)?.reason
+        val excessiveIds = TestRunChecks.findExcessiveResults(expectedIds, testReport)
+
+        if (excessiveIds.isNotEmpty()) {
+            // No single input is to blame for a desynchronized batch, so the first one carries the report — an
+            // arbitrary choice, but it must not pass silently.
+            testServices.groupingStageInputs.first().failWithCollectedOutputs(
+                texts,
+                "Sanity check failed: grouped batch reported unexpected test ids: $excessiveIds.",
+                "Expected ids: $expectedIds",
+                "This indicates protocol/report desynchronization (results for tests that were not part of this batch).",
+            )
+            anyFailureAttributed = true
+        }
+
+        val missingIds = TestRunChecks.findMissingResults(expectedIds, testReport).toSet()
+        for (input in testServices.groupingStageInputs) {
+            // Every grouped test is driven via the launcher's `ProxyLauncher_*.runTest()` (asserting `box() == "OK"`),
+            // so it must have a `box()`. Tests without one must be isolated — they are driven by a custom JS entry
+            // point and cannot report a structured result line.
+            checkTestInfrastructure(hasBoxMethod(input)) {
+                "Test ${input.testInfo} does not have a box() method, so its execution status cannot be reported " +
+                        "via the grouped result protocol. Please isolate this test using either existing ways in " +
+                        "WasmGroupingTestIsolator or add a new rule there."
+            }
+
+            val id = computeProxyLauncherClassName(input.testServices.testInfo)
+            when {
+                id in missingIds -> {
+                    input.failWithCollectedOutputs(
+                        texts,
+                        emptyReportReason,
+                        "Sanity check failed: no per-test result was reported for '$id' in the grouped batch.",
+                        missingResultDiagnosis(id, crashed = parsedBatchResult.crashedInProgress(id)),
+                    )
+                    anyFailureAttributed = true
+                }
+                id in testReport.failedTests -> {
+                    val outcome = results.getValue(id)
+                    val reportedFailure = listOfNotNull(outcome.message, outcome.details).joinToString("\n")
+                    if (parsedBatchResult.crashedInProgress(id)) {
+                        // The test both reported a failure on one VM and took another one down. Report the two
+                        // together: the assertion alone would hide that it crashes an engine, and the crash alone
+                        // would hide what the test actually asserted. The crash needs the VM output to diagnose.
+                        input.failWithCollectedOutputs(texts, reportedFailure, crashedAnotherVmDiagnosis(id))
+                    } else {
+                        // Its own message and stack trace say everything, so the collected outputs are not repeated.
+                        input.failWith(AssertionError(reportedFailure))
+                    }
+                    anyFailureAttributed = true
+                }
+                // The test ran to completion on at least one VM, but took another one down while executing. Without
+                // this branch the surviving VM's result would report it as passing, and the crash would surface
+                // only as the unattributed batch-level VM exception below.
+                parsedBatchResult.crashedInProgress(id) -> {
+                    input.failWithCollectedOutputs(texts, crashedAnotherVmDiagnosis(id))
+                    anyFailureAttributed = true
+                }
+            }
+        }
+
+        // A VM may have thrown (e.g. a hard trap) without that surfacing as a per-test failure above. If nothing
+        // was attributed to a specific test, surface the raw VM exception so the batch does not pass silently.
+        if (!anyFailureAttributed && exceptions.isNotEmpty()) {
+            throw exceptions.first()
+        }
+    }
+
+    /**
+     * Explains that [id] took one VM down even though another one ran it to completion — reported whether that other
+     * VM saw it pass or fail, so a crash is never hidden behind an outcome from a surviving engine.
+     */
+    private fun crashedAnotherVmDiagnosis(id: String): String =
+        "Test '$id' reported a result on at least one VM, but on another VM it printed a " +
+                "'${GroupedTestsResultProtocol.STARTED}' line with no terminal " +
+                "'${GroupedTestsResultProtocol.PASSED}'/'${GroupedTestsResultProtocol.FAILED}' result — " +
+                "this test most likely crashed that VM (a hard trap, OOM, or process exit) while executing."
+
+    /** Explains why the batch carries no result for [id]: [crashed] tells a VM-crasher from a never-run test. */
+    private fun missingResultDiagnosis(id: String, crashed: Boolean): String = if (crashed) {
+        "The VM printed a '${GroupedTestsResultProtocol.STARTED}' line for '$id' but no terminal " +
+                "'${GroupedTestsResultProtocol.PASSED}'/'${GroupedTestsResultProtocol.FAILED}' result — " +
+                "this test most likely crashed the VM (a hard trap, OOM, or process exit) while executing."
+    } else {
+        "The test was expected to run as part of the batch, but produced no " +
+                "'${GroupedTestsResultProtocol.LINE_PREFIX}' line (not even a " +
+                "'${GroupedTestsResultProtocol.STARTED}' one). This typically indicates the test was silently " +
+                "skipped (e.g. a stripped ProxyLauncher class), or a VM crashed before this test's launcher was reached."
+    }
+
+    /**
+     * Fails this specific test with [lines] (`null` ones are dropped) followed by every text the batch collected,
+     * so JUnit reports it against this test instead of against the whole batch.
+     */
+    private fun NonGroupingStageOutput.failWithCollectedOutputs(texts: List<String>, vararg lines: String?) {
+        failWith(AssertionError((lines.filterNotNull() + "Collected outputs:" + texts).joinToString("\n")))
+    }
+
+    /** Routes [error] into this test's own failure sink, so JUnit attributes it to this test. */
+    private fun NonGroupingStageOutput.failWith(error: Throwable) {
+        catchingExecutor.executeWithCatching({ WrappedException.FromGroupingHandler(it, this@AbstractWasmGroupingStageBoxRunner) }) {
+            throw error
+        }
+    }
+
+    private fun collectExceptionTexts(throwable: Throwable): List<String> {
+        val texts = mutableListOf<String>()
+        var current: Throwable? = throwable
+        while (current != null) {
+            current.message?.let { message ->
+                if (message !in texts) {
+                    texts += message
+                }
+            }
+            current = current.cause
+        }
+        return texts
     }
 
     /**
      * Returns `true` if any module of [input] contains a file with a top-level `box()` function.
      *
      * Tests without a `box()` (e.g. `// FILE: entry.mjs` driven Wasm/JS size tests) are
-     * executed via a custom JS entry point — not via the synthetic `ProxyLauncher_<hash>` /
-     * `Launcher_<hash>` unit-test classes — so they cannot be sanity-checked against
-     * `##teamcity[testSuiteFinished` markers.
+     * executed via a custom JS entry point — not via the synthetic `ProxyLauncher_<hash>`
+     * launcher classes — so they cannot report a structured per-test result line.
      */
     protected fun hasBoxMethod(input: NonGroupingStageOutput): Boolean {
         val moduleStructure = input.testServices.moduleStructure
@@ -225,35 +303,5 @@ abstract class AbstractWasmGroupingStageBoxRunner(
             }
         }
         return false
-    }
-
-    /**
-     * For a given grouping input, returns all suite names that could legitimately indicate that
-     * its test was actually executed.
-     *
-     * Two flows produce different suite-name shapes:
-     *  - The non-isolated (grouped) path uses `ProxyLauncher_<hashCode(additionalPackage)>`
-     *    (see `WasmCompilerSecondStageFacade.Grouping.transform()`).
-     *  - The friend-dependency isolated path keeps the per-test KLIB as the `-Xinclude` main
-     *    module (so that `-Xfriend-modules` correctly preserves the friend relation across
-     *    sibling KLIBs). In that path the `@Test`-annotated launcher class baked into the
-     *    per-test KLIB by `WasmJsLauncherAdditionalSourceProvider` (named
-     *    `Launcher_<hashCode(relativePath)>`) is what `GenerateWasmTests` registers — the
-     *    synthetic `ProxyBatchLauncher.kt` is silently dropped because the linking pipeline
-     *    skips frontend/Fir2Ir when `-Xinclude` is set.
-     */
-    private fun computeExpectedSuiteNames(input: NonGroupingStageOutput): List<String> {
-        val result = mutableListOf<String>()
-        result += computeProxyLauncherClassName(input.testServices.testInfo)
-
-        val moduleStructure = input.testServices.moduleStructure
-        for (module in moduleStructure.modules) {
-            for (file in module.files) {
-                if (MainFunctionForBlackBoxTestsSourceProvider.containsBoxMethod(file.originalContent)) {
-                    result += WasmJsLauncherAdditionalSourceProvider.computeLauncherClassName(file)
-                }
-            }
-        }
-        return result
     }
 }
