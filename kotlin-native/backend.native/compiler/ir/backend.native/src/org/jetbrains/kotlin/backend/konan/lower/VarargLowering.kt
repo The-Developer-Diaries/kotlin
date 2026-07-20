@@ -290,10 +290,14 @@ internal class VarargInjectionLowering(val context: NativeBackendContext) : Decl
                     is IrConstantPrimitive -> {
                         val castedConst = when (it.value.kind) {
                             IrConstKind.Byte -> IrConstImpl.byte(it.startOffset, it.endOffset, irBuiltIns.byteType, it.value.value as Byte)
+                            IrConstKind.UByte -> IrConstImpl.ubyte(it.startOffset, it.endOffset, irBuiltIns.ubyteType, it.value.value as UByte)
                             IrConstKind.Short -> IrConstImpl.short(it.startOffset, it.endOffset, irBuiltIns.shortType, it.value.value as Short)
+                            IrConstKind.UShort -> IrConstImpl.ushort(it.startOffset, it.endOffset, irBuiltIns.ushortType, it.value.value as UShort)
                             IrConstKind.Int -> IrConstImpl.int(it.startOffset, it.endOffset, irBuiltIns.intType, it.value.value as Int)
+                            IrConstKind.UInt -> IrConstImpl.uint(it.startOffset, it.endOffset, irBuiltIns.uintType, it.value.value as UInt)
                             IrConstKind.Long -> IrConstImpl.long(it.startOffset, it.endOffset, irBuiltIns.longType, it.value.value as Long)
-                            else -> error("Unsupported unsigned constant")
+                            IrConstKind.ULong -> IrConstImpl.ulong(it.startOffset, it.endOffset, irBuiltIns.ulongType, it.value.value as ULong)
+                            else -> error("Unsupported constant")
                         }
                         builder.irConstantPrimitive(castedConst)
                     }
