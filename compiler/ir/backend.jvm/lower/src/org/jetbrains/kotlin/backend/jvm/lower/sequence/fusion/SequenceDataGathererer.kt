@@ -40,6 +40,7 @@ import org.jetbrains.kotlin.ir.visitors.acceptChildrenVoid
 import org.jetbrains.kotlin.ir.visitors.acceptVoid
 
 private const val SEQUENCE_OF = "sequenceOf"
+private const val AS_SEQUENCE = "asSequence"
 private const val GENERATE_SEQUENCE = "generateSequence"
 internal const val MAP = "map"
 internal const val MAP_INDEXED = "mapIndexed"
@@ -308,10 +309,24 @@ internal class SequenceDataGatherer(val context: JvmBackendContext) : IrVisitorV
         )
     }
 
+
+    private fun matchWithAsSequence(expression: IrCall) {
+        val receiver = expression.arguments.getOrNull(0) ?: return
+        if (receiver is IrGetValue) {
+            if (!isSafeToLower(receiver)) return
+            if (!receiver.type.isSubtypeOfClass(context.irBuiltIns.iterableClass)) return
+        }
+        expression.sequenceDataOfExpression = SequenceData(
+            SequenceSource.AsSequence(receiver),
+            emptyList()
+        )
+    }
+
     override fun visitCall(expression: IrCall) {
         super.visitCall(expression)
         if (!isElementSequence(context, expression)) return
         val functionName = expression.symbol.owner.name.asString()
+        if (!isCallFromKotlinSequences(expression) && functionName != AS_SEQUENCE) return
         when (functionName) {
             MAP -> matchWithMap(expression, isIndexed = false, isNotNull = false)
             MAP_INDEXED -> matchWithMap(expression, isIndexed = true, isNotNull = false)
@@ -322,6 +337,7 @@ internal class SequenceDataGatherer(val context: JvmBackendContext) : IrVisitorV
             FILTER_NOT_NULL -> matchWithFilter(expression, FilterVersion.FilterNotNull)
             GENERATE_SEQUENCE -> matchWithGenerateSequence(expression)
             SEQUENCE_OF -> matchWithSequenceOf(expression)
+            AS_SEQUENCE -> matchWithAsSequence(expression)
         }
     }
 }
