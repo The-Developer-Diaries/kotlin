@@ -11,6 +11,7 @@ import org.jetbrains.kotlin.backend.common.IrElementTransformerVoidWithContext
 import org.jetbrains.kotlin.backend.common.lower.createIrBuilder
 import org.jetbrains.kotlin.backend.jvm.JvmBackendContext
 import org.jetbrains.kotlin.backend.jvm.lower.sequence.fusion.consumers.*
+import org.jetbrains.kotlin.backend.jvm.lower.sequence.fusion.transformers.TransformerStrategy
 import org.jetbrains.kotlin.ir.IrElement
 import org.jetbrains.kotlin.ir.IrStatement
 import org.jetbrains.kotlin.ir.builders.IrBuilderWithScope
@@ -113,6 +114,28 @@ internal fun IrBuilderWithScope.callRichFunctionReference(
     }
 }
 
+internal fun IrBuilderWithScope.callPredicate(
+    predicate: IrExpression,
+    parent: IrDeclarationParent,
+    vararg args: IrExpression,
+): IrExpression {
+    return when (predicate) {
+        is IrRichFunctionReference -> callRichFunctionReference(predicate, parent, *args)
+        else -> {
+            val invokeSymbol = predicate.type.classOrNull?.owner?.declarations
+                ?.filterIsInstance<IrSimpleFunction>()
+                ?.firstOrNull { it.name.asString() == "invoke" }?.symbol
+                ?: error("Didn't find invoke for the predicate: ${predicate.dump()}")
+            irCall(invokeSymbol).apply {
+                dispatchReceiver = predicate
+                args.forEachIndexed { index, arg ->
+                    arguments[index + 1] = arg
+                }
+            }
+        }
+    }
+}
+
 internal fun isElementSequence(context: JvmBackendContext, element: IrElement): Boolean {
     val sequenceSymbol = context.symbols.sequence ?: return false
     val type = when (element) {
@@ -193,6 +216,11 @@ private fun deployStrategies(
     sequenceData: SequenceData,
     builderWithParent: IrBuilderWithParent,
 ): SequenceReplacement? {
-    val sequenceReplacement = consumerStrategy.createSequenceReplacement() ?: return null
+    var sequenceReplacement = consumerStrategy.createSequenceReplacement() ?: return null
+    for (transformer in sequenceData.transformers) {
+        val transformerStrategy = TransformerStrategy.create(transformer, builderWithParent)
+        sequenceReplacement =
+            transformerStrategy.addTransformerToBodyBuilder(sequenceReplacement)
+    }
     return sequenceReplacement
 }

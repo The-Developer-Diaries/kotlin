@@ -16,8 +16,28 @@ import org.jetbrains.kotlin.ir.expressions.IrRichFunctionReference
 import org.jetbrains.kotlin.ir.symbols.IrValueSymbol
 import org.jetbrains.kotlin.ir.types.IrType
 
+internal typealias MapPredicate = (IrBuilderWithParent) -> (IrValueDeclaration) -> IrExpression
+internal typealias MapIndexedPredicate = (IrBuilderWithParent) -> (IrValueDeclaration, IrValueDeclaration) -> IrExpression
+
+internal sealed class MapPredicateCall {
+    class Indexed(val predicate: MapIndexedPredicate) : MapPredicateCall()
+    class NonIndexed(val predicate: MapPredicate) : MapPredicateCall()
+}
+
+internal sealed class SequenceTransformer {
+    class Map(
+        val predicateCall: MapPredicateCall,
+        val isIndexed: Boolean,
+        val isNotNull: Boolean,
+        val startOffset: Int,
+        val endOffset: Int,
+    ) :
+        SequenceTransformer()
+}
+
 internal class SequenceData(
     val sequenceSource: SequenceSource,
+    val transformers: List<SequenceTransformer>
 )
 
 // sequenceSource is what the sequence was created from, to be substituted if the loop is to be fused
