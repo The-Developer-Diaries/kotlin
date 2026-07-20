@@ -40,6 +40,7 @@ import org.jetbrains.kotlin.ir.visitors.acceptChildrenVoid
 import org.jetbrains.kotlin.ir.visitors.acceptVoid
 
 private const val SEQUENCE_OF = "sequenceOf"
+private const val GENERATE_SEQUENCE = "generateSequence"
 internal const val MAP = "map"
 internal const val MAP_INDEXED = "mapIndexed"
 internal const val MAP_NOT_NULL = "mapNotNull"
@@ -159,7 +160,14 @@ internal class SequenceDataGatherer(val context: JvmBackendContext) : IrVisitorV
         if (declaration.isVar) return
         if (!isElementSequence(context, declaration)) return
         val expressionSequenceData = declaration.initializer?.sequenceDataOfExpression
-        declaration.symbol.owner.sequenceDataOfVariable = expressionSequenceData
+        declaration.symbol.owner.sequenceDataOfVariable = if (expressionSequenceData?.sequenceSource is SequenceSource.GenerateSequence &&
+            expressionSequenceData.sequenceSource.initialValue is GenerateSequenceInitialValue.NoInitialValue &&
+            (declaration.usageCounter ?: 0) > 1
+        ) {
+            null
+        } else {
+            expressionSequenceData
+        }
     }
 
     // assigns sequence data of the variable to the corresponding expression
@@ -208,6 +216,42 @@ internal class SequenceDataGatherer(val context: JvmBackendContext) : IrVisitorV
             )
         ) + receiverData.transformers
         expression.sequenceDataOfExpression = SequenceData(receiverData.sequenceSource, transformers)
+    }
+
+    private fun matchWithGenerateSequence(expression: IrCall) {
+        val results = when (expression.arguments.size) {
+            1 -> {
+                // generateSequence(() -> T?)
+                val func = expression.arguments.getOrNull(0) as? IrRichFunctionReference ?: return
+                GenerateSequenceInitialValue.NoInitialValue to func
+            }
+            2 -> {
+                val initialValueOrFunction = expression.arguments.getOrNull(0)
+                val func = expression.arguments.getOrNull(1) as? IrRichFunctionReference ?: return
+                when (initialValueOrFunction) {
+                    is IrRichFunctionReference -> {
+                        // generateSequence(() -> T?, (T) -> T?)
+                        GenerateSequenceInitialValue.InitialFunction(initialValueOrFunction) to func
+                    }
+                    else -> {
+                        // generateSequence(T?, (T) -> T?)
+                        if (initialValueOrFunction == null) return
+                        if (!isSafeToLower(initialValueOrFunction)) return
+                        GenerateSequenceInitialValue.InitialValue(initialValueOrFunction) to func
+                    }
+                }
+            }
+            else -> {
+                return
+            }
+        }
+        val initialValue = results.first
+        val func = results.second
+        val elementType = extractSequenceArgumentType(expression.type) ?: return
+        expression.sequenceDataOfExpression = SequenceData(
+            SequenceSource.GenerateSequence(initialValue, func, elementType),
+            emptyList()
+        )
     }
 
     private fun extractSequenceArgumentType(sequenceType: IrType): IrType? =
@@ -270,6 +314,7 @@ internal class SequenceDataGatherer(val context: JvmBackendContext) : IrVisitorV
             FILTER -> matchWithFilter(expression, FilterVersion.Filter)
             FILTER_NOT -> matchWithFilter(expression, FilterVersion.FilterNot)
             FILTER_NOT_NULL -> matchWithFilter(expression, FilterVersion.FilterNotNull)
+            GENERATE_SEQUENCE -> matchWithGenerateSequence(expression)
             SEQUENCE_OF -> matchWithSequenceOf(expression)
         }
     }

@@ -83,9 +83,17 @@ internal data class SequenceReplacement(
 
 class SequenceFusionLowering(val context: JvmBackendContext) : FileLoweringPass {
     override fun lower(irFile: IrFile) {
+        val reuseMarker = ReusedSequenceMarker(context)
+        irFile.acceptChildrenVoid(reuseMarker)
         val transformer = SequenceFusionTransformer(context)
         irFile.transformChildrenVoid(transformer)
     }
+}
+
+internal sealed class GenerateSequenceInitialValue {
+    class InitialValue(val expression: IrExpression) : GenerateSequenceInitialValue()
+    class InitialFunction(val function: IrRichFunctionReference) : GenerateSequenceInitialValue()
+    object NoInitialValue : GenerateSequenceInitialValue()
 }
 
 internal typealias IrBuilderWithParent = Pair<IrBuilderWithScope, IrDeclarationParent>
