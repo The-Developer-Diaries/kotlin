@@ -107,6 +107,22 @@ fun Project.configureJavaCompile() {
 
 val kotlinApiVersionForProjectsDependingOnStableStdlib: Provider<String> = project.providers.gradleProperty("kotlinApiVersionForProjectsDependingOnStableStdlib")
 
+// Modules that compile with -Xreturn-value-checker=full via their own build scripts.
+// They must be excluded from the =check default, otherwise both values would be passed to
+// the same compilation and -Werror would fail on the duplicate-argument warning.
+// Plus, combining both flags will be resulted in choosing only one of them,
+// and it will result in undesired behavior
+val projectsWithReturnValueCheckerFull = setOf(
+    ":kotlin-stdlib",
+    ":kotlin-test",
+    ":kotlin-stdlib-js-ir-minimal-for-test",
+    ":kotlin-stdlib-jvm-minimal-for-test",
+    ":kotlin-stdlib-jklib-for-test",
+    ":kotlin-power-assert-runtime",
+    ":kotlin-native:Interop:Runtime",
+    ":kotlin-native:runtime",
+)
+
 fun Project.configureKotlinCompilationOptions() {
     plugins.withType<KotlinBasePluginWrapper> {
         val kotlinLanguageVersion: Provider<String> = project.providers.gradleProperty("kotlinLanguageVersion")
@@ -134,6 +150,7 @@ fun Project.configureKotlinCompilationOptions() {
                         "-Xwarning-level=REDUNDANT_CLI_ARG:disabled".takeIf {
                             project.kotlinExtension.compilerVersion.get() == project.kotlinToolingVersion.toString()
                         },
+                        "-Xreturn-value-checker=check".takeUnless { project.path in projectsWithReturnValueCheckerFull },
                     )
                 }
 
