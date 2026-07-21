@@ -255,11 +255,6 @@ class BackendWasmSymbols(
             CoroutinesStateMachineIntrinsics()
         else null
 
-    override val coroutineImpl: IrClassSymbol =
-        (coroutinesStackSwitchingIntrinsics?.coroutineImpl ?: coroutinesStateMachineIntrinsics!!.coroutineImpl).classSymbol()
-
-    private val String.coroutinesClassId get() = ClassId(StandardNames.COROUTINES_PACKAGE_FQ_NAME, Name.identifier(this))
-
     inner class CoroutinesStackSwitchingIntrinsics {
         val suspendFunctionToContref: List<IrSimpleFunctionSymbol> by run {
             val symbols = CallableIds.suspendFunctionToContref.map { it.functionSymbol() }
@@ -277,7 +272,6 @@ class BackendWasmSymbols(
         val resumeThrowIntrinsic by CallableIds.resumeThrowIntrinsic.functionSymbol()
         val resumeWithIntrinsic by CallableIds.resumeWithIntrinsic.functionSymbol()
         val resumeWithImpl by CallableIds.resumeWithImpl.functionSymbol()
-        val coroutineImpl = "CoroutineImplStackSwitching".coroutinesClassId
 
         val createCoroutineUninterceptedIntrinsicsStackSwitching: List<IrSimpleFunctionSymbol> by run {
             val createCoroutineUninterceptedIntrinsic0StackSwitching by CallableIds.createCoroutineUninterceptedIntrinsic0StackSwitching.functionSymbol()
@@ -289,10 +283,11 @@ class BackendWasmSymbols(
                 )
             )
         }
+
+        val coroutineImplStackSwitching = ClassIds.coroutineImplStackSwitching.classSymbol()
     }
 
     inner class CoroutinesStateMachineIntrinsics {
-        val coroutineImpl = "CoroutineImplStateMachine".coroutinesClassId
 
         val createSimpleCoroutineFromSuspendFunction by
         CallableIds.createSimpleCoroutineFromSuspendFunction.functionSymbol()
@@ -459,6 +454,8 @@ class BackendWasmSymbols(
     }
 }
 
+private val String.coroutinesClassId get() = ClassId(StandardNames.COROUTINES_PACKAGE_FQ_NAME, Name.identifier(this))
+
 private object ClassIds {
     // WASM internal class
     private val String.wasmClassId get() = ClassId(WasmStandardClassIds.BASE_WASM_INTERNAL_PACKAGE, Name.identifier(this))
@@ -509,6 +506,8 @@ private object ClassIds {
     val typedfuncref = ClassId(WasmStandardClassIds.BASE_WASM_INTERNAL_PACKAGE.child(Name.identifier("reftypes")), Name.identifier("typedfuncref"))
     val anyref = ClassId(WasmStandardClassIds.BASE_WASM_INTERNAL_PACKAGE.child(Name.identifier("reftypes")), Name.identifier("anyref"))
     val WasmExport = ClassId(WasmStandardClassIds.BASE_WASM_PACKAGE, Name.identifier("WasmExport"))
+
+    val coroutineImplStackSwitching = "CoroutineImplStackSwitching".coroutinesClassId
 }
 
 private val String.coroutinesIntrinsicsCallableId get() = CallableId(StandardNames.COROUTINES_INTRINSICS_PACKAGE_FQ_NAME, Name.identifier(this))
