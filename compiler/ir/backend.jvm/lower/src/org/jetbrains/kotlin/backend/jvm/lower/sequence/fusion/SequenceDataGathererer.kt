@@ -42,6 +42,8 @@ import org.jetbrains.kotlin.ir.visitors.acceptVoid
 private const val SEQUENCE_OF = "sequenceOf"
 private const val AS_SEQUENCE = "asSequence"
 private const val GENERATE_SEQUENCE = "generateSequence"
+private const val SEQUENCE = "sequence"
+private const val EMPTY_SEQUENCE = "emptySequence"
 internal const val MAP = "map"
 internal const val MAP_INDEXED = "mapIndexed"
 internal const val MAP_NOT_NULL = "mapNotNull"
@@ -375,6 +377,21 @@ internal class SequenceDataGatherer(val context: JvmBackendContext) : IrVisitorV
         )
     }
 
+    private fun matchWithSequence(expression: IrCall) {
+        val sequenceScope = expression.arguments.getOrNull(0) as? IrRichFunctionReference ?: return
+        expression.sequenceDataOfExpression = SequenceData(
+            SequenceSource.Sequence(sequenceScope),
+            emptyList()
+        )
+    }
+
+    private fun matchWithEmptySequence(expression: IrCall) {
+        expression.sequenceDataOfExpression = SequenceData(
+            SequenceSource.Empty,
+            emptyList()
+        )
+    }
+
     override fun visitCall(expression: IrCall) {
         super.visitCall(expression)
         if (!isElementSequence(context, expression)) return
@@ -395,6 +412,8 @@ internal class SequenceDataGatherer(val context: JvmBackendContext) : IrVisitorV
             GENERATE_SEQUENCE -> matchWithGenerateSequence(expression)
             SEQUENCE_OF -> matchWithSequenceOf(expression)
             AS_SEQUENCE -> matchWithAsSequence(expression)
+            SEQUENCE -> matchWithSequence(expression)
+            EMPTY_SEQUENCE -> matchWithEmptySequence(expression)
         }
     }
 }
