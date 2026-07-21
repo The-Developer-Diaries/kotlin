@@ -32,6 +32,13 @@ internal class CurrentXcodeTest {
     }
 
     @Test
+    fun `Should be able to access Xcode product build version`() {
+        val build = CurrentXcode().productBuildVersion
+        // e.g. "17E192", "14B47b": <major><stage-letter><minor>[<patch-letter>].
+        assertTrue(build.matches(Regex("""\d+[A-Z]\d+[a-z]?""")), "Unexpected ProductBuildVersion: '$build'")
+    }
+
+    @Test
     fun `Xcode bundle version version should match xcodebuild version`() {
         val xcode = CurrentXcode()
 
