@@ -33,11 +33,16 @@ private class WasmCoroutinesStackSwitchingIntrinsicsTransformer(val context: Was
         if (!symbol.isBound) return expression
 
         val realOwner = symbol.owner.resolveFakeOverrideOrSelf()
+        val stackSwitchingIntrinsics = context.wasmSymbols.coroutinesStackSwitchingIntrinsics!!
+
+        if (realOwner.symbol == context.wasmSymbols.suspendCoroutineUninterceptedOrReturnIntrinsic) {
+            return irCall(expression, stackSwitchingIntrinsics.suspendCoroutineUninterceptedOrReturnIntrinsicStackSwitching)
+        }
+
         val createCoroutineSymbols = context.wasmSymbols.createCoroutineUninterceptedIntrinsics
         val idx = createCoroutineSymbols.indexOf(realOwner.symbol)
 
         if (idx != -1) {
-            val stackSwitchingIntrinsics = context.wasmSymbols.coroutinesStackSwitchingIntrinsics!!
             return irCall(expression, stackSwitchingIntrinsics.createCoroutineUninterceptedIntrinsicsStackSwitching[idx])
         }
 
