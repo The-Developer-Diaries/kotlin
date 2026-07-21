@@ -304,11 +304,8 @@ class BackendWasmSymbols(
         )
     }
 
-    override val suspendCoroutineUninterceptedOrReturn by
-    if (configuration.wasmUseStackSwitchingProposal)
-        CallableIds.suspendCoroutineUninterceptedOrReturnStackSwitching.functionSymbol()
-    else
-        CallableIds.suspendCoroutineUninterceptedOrReturn.functionSymbol()
+    val suspendCoroutineUninterceptedOrReturnIntrinsic by
+    CallableIds.suspendCoroutineUninterceptedOrReturnIntrinsic.functionSymbol()
 
     // KProperty implementations
     val kLocalDelegatedPropertyImpl: IrClassSymbol = ClassIds.KLocalDelegatedPropertyImpl.classSymbol()
