@@ -5,6 +5,7 @@
 
 package org.jetbrains.kotlin.config.keys.generator
 
+import org.jetbrains.kotlin.components.ClassLoadersCache
 import org.jetbrains.kotlin.config.*
 import org.jetbrains.kotlin.config.keys.generator.model.KeysContainer
 import org.jetbrains.kotlin.incremental.components.ICJvmMetadataTracker
@@ -62,4 +63,5 @@ object JvmConfigurationKeysContainer : KeysContainer("org.jetbrains.kotlin.confi
     val IC_METADATA_TRACKER by key<ICJvmMetadataTracker>("Tracks generated in-module JVM metadata for KMP JVM IC", throwOnNull = false)
     val USE_METADATA_ON_INCREMENTAL_CLASSPATH by key<Boolean>("Use fragment metadata found on the compilation classpath to perform incremental compilation")
     val USE_JAVA_DIRECT by key<Boolean>("Use java-direct as frontend Java facade")
+    val CLASSLOADERS_CACHE by key<ClassLoadersCache>("Cache for classloaders to be used by compiler plugins (e.g. Kapt)", throwOnNull = false)
 }
