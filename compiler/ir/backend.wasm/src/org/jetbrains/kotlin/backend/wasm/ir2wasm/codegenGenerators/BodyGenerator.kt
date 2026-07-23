@@ -116,12 +116,16 @@ class BodyGenerator(
 
         val elementConstValues = irVararg.elements.map { (it as IrConst).value!! }
 
-        val resource = when (irVararg.varargElementType) {
-            irBuiltIns.byteType -> elementConstValues.map { (it as Byte).toLong() } to WasmI8
-            irBuiltIns.booleanType -> elementConstValues.map { if (it as Boolean) 1L else 0L } to WasmI8
-            irBuiltIns.intType -> elementConstValues.map { (it as Int).toLong() } to WasmI32
-            irBuiltIns.shortType -> elementConstValues.map { (it as Short).toLong() } to WasmI16
-            irBuiltIns.longType -> elementConstValues.map { it as Long } to WasmI64
+        val resource = when (kind) {
+            IrConstKind.Byte -> elementConstValues.map { (it as Byte).toLong() } to WasmI8
+            IrConstKind.UByte -> elementConstValues.map { (it as UByte).toLong() } to WasmI8
+            IrConstKind.Boolean -> elementConstValues.map { if (it as Boolean) 1L else 0L } to WasmI8
+            IrConstKind.Int -> elementConstValues.map { (it as Int).toLong() } to WasmI32
+            IrConstKind.UInt -> elementConstValues.map { (it as UInt).toLong() } to WasmI32
+            IrConstKind.Short -> elementConstValues.map { (it as Short).toLong() } to WasmI16
+            IrConstKind.UShort -> elementConstValues.map { (it as UShort).toLong() } to WasmI16
+            IrConstKind.Long -> elementConstValues.map { it as Long } to WasmI64
+            IrConstKind.ULong -> elementConstValues.map { (it as ULong).toLong() } to WasmI64
             else -> return false
         }
 
