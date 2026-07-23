@@ -208,6 +208,8 @@ internal class TemporaryVariableElimination(private val function: JsFunction) {
 
             override fun visitCatch(x: JsCatch) = withNewScope { super.visitCatch(x) }
 
+            override fun visitBlock(x: JsBlock) = withNewScope { super.visitBlock(x) }
+
             override fun visitFunction(x: JsFunction) {
                 for (freeVar in x.collectFreeVariables()) {
                     useVariable(freeVar)
