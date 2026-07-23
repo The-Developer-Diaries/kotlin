@@ -211,7 +211,7 @@ private class SingleTypeImportScope(javac: JavacWrapper,
         val imports = imports(name).toSet().takeIf { it.isNotEmpty() }
                       ?: return parent.findClass(name, pathSegments)
 
-        imports.singleOrNull() ?: return null
+        if (imports.size != 1) return null
 
         return helper.findImport(imports.first().split("."))
                 ?.let { javaClass -> helper.getJavaClassFromPathSegments(javaClass, pathSegments) }

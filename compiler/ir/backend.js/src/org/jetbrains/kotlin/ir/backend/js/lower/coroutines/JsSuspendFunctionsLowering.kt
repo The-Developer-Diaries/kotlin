@@ -287,10 +287,10 @@ open class JsSuspendFunctionsLowering<C : JsCommonBackendContext>(
         val localToPropertyMap = hashMapOf<IrValueSymbol, IrFieldSymbol>()
         var localCounter = 0
         // TODO: optimize by using the same property for different locals.
-        liveLocals.forEach {
-            if (it !== suspendState && it !== suspendResult && it !== stateVar) {
-                localToPropertyMap.getOrPut(it.symbol) {
-                    coroutineClass.addField(Name.identifier("${it.name}${localCounter++}"), it.type, it.isVar)
+        liveLocals.forEach { liveLocal ->
+            if (liveLocal !== suspendState && liveLocal !== suspendResult && liveLocal !== stateVar) {
+                localToPropertyMap.computeIfAbsent(liveLocal.symbol) {
+                    coroutineClass.addField(Name.identifier("${liveLocal.name}${localCounter++}"), liveLocal.type, liveLocal.isVar)
                         .symbol
                 }
             }
@@ -298,7 +298,7 @@ open class JsSuspendFunctionsLowering<C : JsCommonBackendContext>(
         val isSuspendLambda = transformingFunction.parent === coroutineClass
         val parameters = if (isSuspendLambda) simplifiedFunction.nonDispatchParameters else simplifiedFunction.parameters
         for (parameter in parameters) {
-            localToPropertyMap.getOrPut(parameter.symbol) {
+            localToPropertyMap.computeIfAbsent(parameter.symbol) {
                 argumentToPropertiesMap.getValue(parameter).symbol
             }
         }
@@ -447,4 +447,3 @@ internal fun getSuspendFunctionKind(
 @Suppress("MemberVisibilityCanBePrivate")
 internal fun IrCall.isReturnIfSuspendedCall(context: JsCommonBackendContext) =
     symbol == context.symbols.returnIfSuspended
-
