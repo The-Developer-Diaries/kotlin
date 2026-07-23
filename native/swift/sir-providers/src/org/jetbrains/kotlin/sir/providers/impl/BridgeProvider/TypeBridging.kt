@@ -1195,7 +1195,7 @@ internal sealed interface Bridge {
         context(sir: SirSession)
         override fun helperBridges(typeNamer: SirTypeNamer): List<SirBridge> {
             return bridgeProxy?.createSirBridges {
-                val actualArgs = argNames.drop(1).also { if (extensionReceiverParameter != null) it.drop(1) }
+                val actualArgs = argNames.drop(1).let { if (extensionReceiverParameter != null) it.drop(1) else it }
                 buildCall("(${argNames.first()} as ${typeNamer.kotlinFqName(swiftType, SirTypeNamer.KotlinNameType.PARAMETRIZED)}).invoke(${actualArgs.joinToString()})")
             } ?: emptyList()
         }
