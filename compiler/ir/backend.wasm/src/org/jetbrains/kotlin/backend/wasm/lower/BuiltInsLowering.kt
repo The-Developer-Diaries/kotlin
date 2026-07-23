@@ -211,8 +211,13 @@ class BuiltInsLowering(val context: WasmBackendContext) : FileLoweringPass {
                     else
                         symbols.coroutineImpl
 
+                val interceptedFun =
+                    if (context.wasmUseStackSwitching)
+                        symbols.coroutinesStackSwitchingIntrinsics!!.intercepted
+                    else
+                        symbols.coroutinesStateMachineIntrinsics!!.intercepted
+
                 val coroutineImplType = coroutineImpl.starProjectedType
-                val interceptedFun = coroutineImpl.getSimpleFunction("intercepted")!!
 
                 return builder.irComposite {
                     val temporary = irTemporary(cont)
