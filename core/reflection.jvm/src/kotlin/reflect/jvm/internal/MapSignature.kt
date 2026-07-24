@@ -74,6 +74,12 @@ private fun StringBuilder.mapType(type: KmType, c: ReflectTypeMappingContext, wr
             // (first upper bound whose classifier is a non-interface non-annotation class if it exists, or just the first upper bound
             // otherwise). Here we rely on the fact that builtins do not have such signatures. If such signatures appear, this code needs
             // to be adapted.
+            if (typeParameter.upperBounds.size > 1) {
+                throw KotlinReflectionInternalError(
+                    "mapSignature doesn't support type parameters with multiple upper bounds. If there is such member in Kotlin builtins," +
+                            "please adapt this code to handle this case."
+                )
+            }
             val upperBound = typeParameter.upperBounds.firstOrNull()
             if (upperBound != null) {
                 mapType(upperBound, c)
