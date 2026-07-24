@@ -19,7 +19,6 @@ import org.jetbrains.kotlin.load.kotlin.SignatureBuildingComponents
 import org.jetbrains.kotlin.load.kotlin.internalName
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.resolve.scopes.MemberScope
-import org.jetbrains.kotlin.utils.DFS
 import java.lang.reflect.Method
 import java.lang.reflect.Modifier
 import kotlin.jvm.internal.CallableReference.NO_RECEIVER
@@ -30,11 +29,9 @@ import kotlin.reflect.KMutableProperty
 import kotlin.reflect.KProperty1
 import kotlin.reflect.full.isSubtypeOf
 import kotlin.reflect.full.memberProperties
-import kotlin.reflect.full.superclasses
 import kotlin.reflect.full.valueParameters
 import kotlin.reflect.jvm.internal.MemberBelonginess.DECLARED
 import kotlin.reflect.jvm.internal.MemberBelonginess.INHERITED
-import kotlin.reflect.jvm.internal.types.MutableCollectionKClass
 import kotlin.reflect.jvm.internal.types.areEqualKTypes
 import java.lang.Deprecated as JavaLangDeprecated
 
@@ -289,11 +286,6 @@ internal fun KClassImpl<*>.getAdditionalFunctions(): List<ReflectKFunction> {
         it.mapSignature(kmClass).toString()
     }
 
-    // JVM signatures of functions declared in the mutable counterpart of this read-only class (e.g. `MutableIterator.remove`,
-    // `MutableListIterator.add`/`set`). Such mutating methods must not be loaded on the read-only class; the mutable variant gets them
-    // from its own metadata. This is the reflection equivalent of the supertype DFS in `JvmBuiltInsCustomizer.isMutabilityViolation`.
-    val mutableOnlySignatures = if (isMutable) emptySet() else collectMutableCounterpartFunctionSignatures()
-
     return javaAnalogue.declaredMethods.mapNotNull { method ->
         if (Modifier.isStatic(method.modifiers) || method.isSynthetic) return@mapNotNull null
         if (!Modifier.isPublic(method.modifiers) && !Modifier.isProtected(method.modifiers)) return@mapNotNull null
@@ -302,8 +294,6 @@ internal fun KClassImpl<*>.getAdditionalFunctions(): List<ReflectKFunction> {
         val parameterCount = method.parameterTypes.size
         if (parameterCount == 0 && method.name in getterLikeNames) return@mapNotNull null
         if (parameterCount == 1 && method.name in setterLikeNames) return@mapNotNull null
-
-        if (method.isMutabilityViolation(isMutable) || method.jvmSignature in mutableOnlySignatures) return@mapNotNull null
 
         when (method.getJdkMethodStatus(javaAnalogue)) {
             JdkMemberStatus.DROP -> return@mapNotNull null
@@ -346,29 +336,4 @@ private fun Method.getJdkMethodStatus(startClass: Class<*>): JdkMemberStatus {
         queue.addAll(clazz.interfaces)
     }
     return JdkMemberStatus.NOT_CONSIDERED
-}
-
-// Mirrors the signature-list half of `JvmBuiltInsCustomizer.isMutabilityViolation`: a mutating method (`List.sort`, `Collection.removeIf`,
-// ...) belongs only on the mutable variant of a collection, and vice versa. Methods declared in the mutable Kotlin classes themselves
-// (`MutableIterator.remove` etc.) are handled separately via `collectMutableCounterpartFunctionSignatures`.
-private fun Method.isMutabilityViolation(isMutable: Boolean): Boolean =
-    (SignatureBuildingComponents.signature(declaringClass.classId.internalName, jvmSignature)
-            in JvmBuiltInsSignatures.MUTABLE_METHOD_SIGNATURES) != isMutable
-
-// JVM signatures of all functions declared in this read-only class's mutable counterpart and its mutable supertypes.
-private fun KClassImpl<*>.collectMutableCounterpartFunctionSignatures(): Set<String> {
-    val mutableClass = getMutableCollectionKClass(this) ?: return emptySet()
-    return DFS.dfs(
-        listOf(mutableClass),
-        KClass<*>::superclasses,
-        object : DFS.CollectingNodeHandler<KClass<*>, String, HashSet<String>>(HashSet()) {
-            override fun beforeChildren(node: KClass<*>): Boolean {
-                val mutableKmClass = (node as? MutableCollectionKClass<*>)?.mutableKmClass ?: return true
-                for (function in mutableKmClass.functions) {
-                    result += function.mapSignature(mutableKmClass).toString()
-                }
-                return true
-            }
-        },
-    )
 }
