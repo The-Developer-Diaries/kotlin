@@ -120,6 +120,7 @@ val projectsWithReturnValueCheckerFull = setOf(
     ":kotlin-stdlib-jklib-for-test",
     ":kotlin-power-assert-runtime",
     ":kotlin-native:Interop:Runtime",
+    ":kotlin-native:Interop:StubGenerator",
     ":kotlin-native:runtime",
 )
 
