@@ -298,6 +298,9 @@ class BackendWasmSymbols(
 
     inner class CoroutinesStateMachineIntrinsics {
 
+        val suspendCoroutineUninterceptedOrReturnIntrinsicStateMachine by
+        CallableIds.suspendCoroutineUninterceptedOrReturnIntrinsicStateMachine.functionSymbol()
+
         val intercepted by
         CallableIds.coroutineImplIntercepted.functionSymbol()
 
@@ -657,7 +660,10 @@ private object CallableIds {
     val interceptedIntrinsic = "interceptedIntrinsic".wasmCallableId
 
     val suspendCoroutineUninterceptedOrReturnIntrinsic = "suspendCoroutineUninterceptedOrReturnIntrinsic".wasmCallableId
-    val suspendCoroutineUninterceptedOrReturnIntrinsicStackSwitching = "suspendCoroutineUninterceptedOrReturnIntrinsicStackSwitching".wasmCallableId
+    val suspendCoroutineUninterceptedOrReturnIntrinsicStackSwitching =
+        "suspendCoroutineUninterceptedOrReturnIntrinsicStackSwitching".wasmCallableId
+    val suspendCoroutineUninterceptedOrReturnIntrinsicStateMachine =
+        "suspendCoroutineUninterceptedOrReturnIntrinsicStateMachine".wasmCallableId
 
     val suspendFunctionToContref = (0..2).map { "suspendFunction${it}ToContref".wasmCallableId }
     val suspendFunctionToContrefImpl = (0..2).map { "suspendFunction${it}ToContrefImpl".wasmCallableId }
