@@ -517,7 +517,7 @@ private object ClassIds {
     val anyref = ClassId(WasmStandardClassIds.BASE_WASM_INTERNAL_PACKAGE.child(Name.identifier("reftypes")), Name.identifier("anyref"))
     val WasmExport = ClassId(WasmStandardClassIds.BASE_WASM_PACKAGE, Name.identifier("WasmExport"))
 
-    val coroutineImpl = "CoroutineImp".coroutinesClassId
+    val coroutineImpl = "CoroutineImpl".coroutinesClassId
     val coroutineImplStackSwitching = "CoroutineImplStackSwitching".coroutinesClassId
 }
 
