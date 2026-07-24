@@ -12,6 +12,7 @@ import org.jetbrains.kotlin.backend.common.serialization.encodings.BinarySymbolD
 import org.jetbrains.kotlin.backend.common.serialization.encodings.BinarySymbolData.SymbolKind.TYPE_PARAMETER_SYMBOL
 import org.jetbrains.kotlin.descriptors.ClassKind
 import org.jetbrains.kotlin.descriptors.Modality
+import org.jetbrains.kotlin.ir.declarations.IrDeclarationOrigin
 import org.jetbrains.kotlin.ir.util.IdSignature
 import org.jetbrains.kotlin.ir.util.IdSignature.*
 import org.jetbrains.kotlin.ir.util.IdSignatureRenderer
@@ -54,6 +55,8 @@ import org.jetbrains.kotlin.backend.common.serialization.proto.IrSimpleTypeNulla
 import org.jetbrains.kotlin.backend.common.serialization.proto.IrType as ProtoType
 import org.jetbrains.kotlin.backend.common.serialization.proto.IrTypeParameter as ProtoTypeParameter
 import org.jetbrains.kotlin.backend.common.serialization.proto.IrValueParameter as ProtoValueParameter
+
+private val VERSION_OVERLOAD_WRAPPER_ORIGIN_NAME: String = IrDeclarationOrigin.VERSION_OVERLOAD_WRAPPER.name
 
 @ExperimentalLibraryAbiReader
 internal class LibraryAbiReaderImpl(libraryFile: File, filters: List<AbiReadingFilter>) {
@@ -298,6 +301,9 @@ private class LibraryDeserializer(
         ): AbiFunction? {
             val annotations = deserializeAnnotations(proto.base)
 
+            // Origin names are part of the serialized klib format; this matches IrDeclarationOrigin.VERSION_OVERLOAD_WRAPPER.name.
+            val isVersionOverloadWrapper = fileReader.string(proto.base.originName) == VERSION_OVERLOAD_WRAPPER_ORIGIN_NAME
+
             val containingProperty: ContainingEntity.Property?
             val containingClass: ContainingEntity.Class?
 
@@ -399,7 +405,8 @@ private class LibraryDeserializer(
                     signatures = deserializeIdSignature(proto.base.symbol).toAbiSignatures(),
                     annotations = annotations,
                     isInline = flags.isInline,
-                    valueParameters = allValueParameters.compact()
+                    valueParameters = allValueParameters.compact(),
+                    isVersionOverloadWrapper = isVersionOverloadWrapper,
                 )
             } else {
                 // Show only a non-trivial return type for the others.
@@ -417,6 +424,7 @@ private class LibraryDeserializer(
                     valueParameters = allValueParameters.compact(),
                     returnType = nonTrivialReturnType,
                     companionExtensionsClass = companionExtension,
+                    isVersionOverloadWrapper = isVersionOverloadWrapper,
                 )
             }
         }

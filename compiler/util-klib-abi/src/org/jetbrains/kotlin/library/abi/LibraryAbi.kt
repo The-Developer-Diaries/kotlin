@@ -318,6 +318,16 @@ interface AbiFunction : AbiDeclarationWithModality, AbiTypeParametersContainer {
     val companionExtensionsClass: AbiClassifierReference.ClassReference?
     val valueParameters: List<AbiValueParameter>
     val returnType: AbiType?
+
+    /**
+     * Whether this function is a version-overload wrapper synthesized by the compiler
+     * (IR declaration origin `VERSION_OVERLOAD_WRAPPER`).
+     *
+     * Like annotations, the declaration origin is **not** a part of the ABI and must not be relied upon for
+     * binary-compatibility decisions. It is exposed only for filtering/searching — e.g. to exclude such wrappers
+     * when diffing the ABI produced before and after pre-serialization lowerings.
+     */
+    val isVersionOverloadWrapper: Boolean
 }
 
 /**
