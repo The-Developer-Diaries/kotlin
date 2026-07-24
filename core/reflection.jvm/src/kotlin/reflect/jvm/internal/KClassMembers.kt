@@ -295,6 +295,12 @@ internal fun KClassImpl<*>.getAdditionalFunctions(): List<ReflectKFunction> {
         if (parameterCount == 0 && method.name in getterLikeNames) return@mapNotNull null
         if (parameterCount == 1 && method.name in setterLikeNames) return@mapNotNull null
 
+        // Skip a Java method if it corresponds to a function already present in the Kotlin class: either declared in its metadata, or
+        // inherited from a supertype (e.g. `equals`/`hashCode`/`toString` from `kotlin.Any`, or `compareTo` from `Comparable`).
+        // Otherwise the Java-based function, which has flexible types (`equals(Any!)` instead of `equals(Any?)`), would replace the
+        // Kotlin one. This mirrors the `kotlinVersions` check in `JvmBuiltInsCustomizer.getAdditionalFunctions`.
+        if (method.jvmSignature in declaredJvmSignatures) return@mapNotNull null
+
         when (method.getJdkMethodStatus(javaAnalogue)) {
             JdkMemberStatus.DROP -> return@mapNotNull null
             // Hidden-for-resolution members are still listed by reflection, except in final classes where the compiler drops them.
@@ -303,12 +309,6 @@ internal fun KClassImpl<*>.getAdditionalFunctions(): List<ReflectKFunction> {
         }
 
         val function = JavaKNamedFunction(this, method, NO_RECEIVER, KCallableOverriddenStorage.EMPTY)
-
-        // Skip a Java method if it corresponds to a function already present in the Kotlin class: either declared in its metadata, or
-        // inherited from a supertype (e.g. `equals`/`hashCode`/`toString` from `kotlin.Any`, or `compareTo` from `Comparable`).
-        // Otherwise the Java-based function, which has flexible types (`equals(Any!)` instead of `equals(Any?)`), would replace the
-        // Kotlin one. This mirrors the `kotlinVersions` check in `JvmBuiltInsCustomizer.getAdditionalFunctions`.
-        if (method.jvmSignature in declaredJvmSignatures) return@mapNotNull null
         if (function.overridden.isNotEmpty()) return@mapNotNull null
 
         function
