@@ -14,7 +14,7 @@ import kotlin.metadata.jvm.JvmMethodSignature
 import kotlin.metadata.jvm.signature
 
 internal fun KmFunction.mapSignature(container: KmClass?): JvmMethodSignature =
-    mapSignature(name, typeParameters, contextParameters, receiverParameterType, valueParameters, returnType, container)
+    signature ?: mapSignature(name, typeParameters, contextParameters, receiverParameterType, valueParameters, returnType, container)
 
 /**
  * Computes the JVM signature of a function/constructor loaded from metadata.
