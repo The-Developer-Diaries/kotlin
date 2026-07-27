@@ -14,7 +14,9 @@ val jdkVersion = JdkMajorVersion.JDK_17_0
 configureJvmToolchain(jdkVersion)
 
 dependencies {
-    implementation(kotlinStdlib())
+    // Used on TeamCity, might be used on cold branches => need fast build => let's use bootstrap stdlib:
+    implementation(kotlin("stdlib"))
+
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.coroutines.core.jvm)
     implementation(libs.kotlinx.serialization.json)
