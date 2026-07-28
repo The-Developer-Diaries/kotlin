@@ -19,6 +19,12 @@ interface RenderingContext {
     fun ruleLink(rule: CodeRule): String = markdownLink(rule.source, rule.name)
 }
 
+val GitDiff.Origin.GitHub.compareUrl: String
+    get() = "https://github.com/$repository/compare/${base.rev}...${to.rev}"
+
+val GitDiff.Origin.GitHub.compareMarkdownLink: String
+    get() = "[${base.rev}...${to.rev}](${compareUrl})"
+
 private const val WARNING_EMOJI = "⚠\uFE0F"
 
 context(renderingContext: RenderingContext)

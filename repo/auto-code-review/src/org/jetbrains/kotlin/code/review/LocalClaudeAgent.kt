@@ -143,7 +143,7 @@ class LocalClaudeAgent private constructor(
     ): AgentResult {
         val diffDescription = when (diffOrigin) {
             is GitDiff.Origin.Local -> "`git diff ${diffOrigin.from.sha1}` at `${diffOrigin.to.root}`"
-            is GitDiff.Origin.GitHub -> diffOrigin.url // TODO: use a machine-readable .diff URL instead?
+            is GitDiff.Origin.GitHub -> diffOrigin.rawDiffUrl
         }
 
         val input = buildString {

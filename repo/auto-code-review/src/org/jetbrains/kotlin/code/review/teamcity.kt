@@ -50,15 +50,15 @@ suspend fun main(args: Array<String>) {
 
 suspend fun fetchDiffFromGitHub(repository: String, from: GitRevision, to: GitSHA1): GitDiff {
     val origin = GitDiff.Origin.GitHub(repository, from, to)
-    val text = fetchDiffTextFromGitHub(repository, from, to)
+    val text = fetchDiffTextFromGitHub(origin)
     return GitDiff(parseDiffText(text), origin)
 }
 
-private suspend fun fetchDiffTextFromGitHub(repository: String, from: GitRevision, to: GitRevision): String {
+private suspend fun fetchDiffTextFromGitHub(origin: GitDiff.Origin.GitHub): String {
     val client = HttpClient.newHttpClient()
 
     val request = HttpRequest.newBuilder()
-        .uri(URI.create("https://github.com/$repository/compare/${from.rev}...${to.rev}.diff"))
+        .uri(URI.create(origin.rawDiffUrl))
         .GET()
         .build()
 
@@ -88,8 +88,8 @@ private class GitHubRenderingContext(val repository: String, val sha1: GitSHA1) 
 
     override fun describeDiff(origin: GitDiff.Origin): String = when (origin) {
         is GitDiff.Origin.Local ->
-            "[${origin.from.sha1}...${sha1.sha1}](https://github.com/$repository/compare/${origin.from.sha1}...${sha1.sha1})"
+            GitDiff.Origin.GitHub(repository, origin.from, sha1).compareMarkdownLink
         is GitDiff.Origin.GitHub ->
-            "[${origin.base.rev}...${sha1.sha1}](${origin.url})"
+            origin.compareMarkdownLink
     }
 }
