@@ -20,7 +20,7 @@ suspend fun main(args: Array<String>) {
 
     val output = File(args[0])
     val repoRoot = File(args[1])
-    val baseRefString = args[2]
+    val baseRevString = args[2]
 
     val gitTree = GitWorkingTree(repoRoot, GitCLI)
     val agent = LocalClaudeAgent.create(gitTree.project)
@@ -28,24 +28,21 @@ suspend fun main(args: Array<String>) {
     val headSha1 = gitTree.findHead()
     val repository = "JetBrains/kotlin"
 
-    val diff = fetchDiffFromGitHub(repository, GitRevision(baseRefString), headSha1)
+    val diff = fetchDiffFromGitHub(repository, GitRevision(baseRevString), headSha1)
+
     val reviewResult = runReview(gitTree.project, diff, agent)
+
     val text = with(GitHubRenderingContext(repository, headSha1)) {
         render(reviewResult)
     }
     output.writeText(text)
 
-    val outputUrl = output.toURI().toURL()
-
     reviewResult.firstException?.let { exception ->
         throw Exception(
-            "Review (partially) failed. See more details in the generated report:\n$outputUrl",
+            "Review (partially) failed. See more details in the generated report",
             exception
         )
     }
-
-    println("Review generated:")
-    println(outputUrl)
 }
 
 suspend fun fetchDiffFromGitHub(repository: String, from: GitRevision, to: GitSHA1): GitDiff {
@@ -57,15 +54,19 @@ suspend fun fetchDiffFromGitHub(repository: String, from: GitRevision, to: GitSH
 private suspend fun fetchDiffTextFromGitHub(origin: GitDiff.Origin.GitHub): String {
     val client = HttpClient.newHttpClient()
 
+    val rawDiffUrl = origin.rawDiffUrl
     val request = HttpRequest.newBuilder()
-        .uri(URI.create(origin.rawDiffUrl))
+        .uri(URI.create(rawDiffUrl))
         .GET()
         .build()
 
-    // Send the request synchronously (or use .sendAsync)
-    val response = client.sendAsync(request, HttpResponse.BodyHandlers.ofString()).asDeferred().await()
+    val response = client.sendAsync(
+        request,
+        HttpResponse.BodyHandlers.ofString()
+    ).asDeferred().await()
+
     if (response.statusCode() !in 200..299) {
-        throw Exception("Failed to fetch diff from GitHub: ${response.statusCode()} ${response.body()}")
+        throw Exception("Failed to fetch the diff from $rawDiffUrl: ${response.statusCode()} ${response.body()}")
     }
 
     return response.body()

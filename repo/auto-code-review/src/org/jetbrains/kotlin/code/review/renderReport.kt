@@ -37,7 +37,7 @@ fun render(review: ReviewResult): String = buildString {
 
 context(renderingContext: RenderingContext)
 fun StringBuilder.appendOrigin(review: ReviewResult) {
-    val readme = ProjectFilePath("repo/auto-code-review/README.md") // FIXME: don't hardcode the project path.
+    val readme = ProjectFilePath("repo/auto-code-review/README.md")
     appendLine(
         """
             ${renderingContext.markdownLink(readme, "Auto Code Review")} for
