@@ -40,6 +40,7 @@ abstract class AbstractCodeFragmentCapturingTest : AbstractAnalysisApiBasedTest(
         firCodeFragment.lazyResolveToPhase(FirResolvePhase.BODY_RESOLVE)
 
         val frontendDiagnostics = mainFile.diagnostics(resolutionFacade, DiagnosticCheckerFilter.ONLY_DEFAULT_CHECKERS)
+            .reportedDiagnostics()
             .toList()
         val frontendErrors = frontendDiagnostics.filter { it.severity == Severity.ERROR }
 

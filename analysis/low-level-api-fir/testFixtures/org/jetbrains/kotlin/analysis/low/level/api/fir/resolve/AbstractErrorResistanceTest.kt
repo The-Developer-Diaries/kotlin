@@ -8,6 +8,7 @@ package org.jetbrains.kotlin.analysis.low.level.api.fir.resolve
 import org.jetbrains.kotlin.analysis.api.standalone.base.projectStructure.AnalysisApiServiceRegistrar
 import org.jetbrains.kotlin.analysis.low.level.api.fir.api.DiagnosticCheckerFilter
 import org.jetbrains.kotlin.analysis.low.level.api.fir.api.diagnostics
+import org.jetbrains.kotlin.analysis.low.level.api.fir.reportedDiagnostics
 import org.jetbrains.kotlin.analysis.low.level.api.fir.services.ErrorResistanceServiceRegistrar
 import org.jetbrains.kotlin.analysis.low.level.api.fir.test.configurators.LLSourceLikeTestConfigurator
 import org.jetbrains.kotlin.analysis.low.level.api.fir.withResolutionFacade
@@ -29,7 +30,9 @@ abstract class AbstractErrorResistanceTest : AbstractAnalysisApiBasedTest() {
                     .count()
             }
 
-            val diagnostics = mainFile.diagnostics(resolutionFacade, DiagnosticCheckerFilter.ONLY_DEFAULT_CHECKERS).toList()
+            val diagnostics = mainFile.diagnostics(resolutionFacade, DiagnosticCheckerFilter.ONLY_DEFAULT_CHECKERS)
+                .reportedDiagnostics()
+                .toList()
             assert(diagnostics.isEmpty()) {
                 val messages = diagnostics.map { it.factoryName }
                 "There should be no diagnostics, found:\n" + messages.joinToString("\n")
