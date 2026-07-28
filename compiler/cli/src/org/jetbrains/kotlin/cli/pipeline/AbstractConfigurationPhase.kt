@@ -16,6 +16,7 @@ import org.jetbrains.kotlin.cli.common.CLICompiler.Companion.SCRIPT_PLUGIN_K2_RE
 import org.jetbrains.kotlin.cli.common.arguments.CommonCompilerArguments
 import org.jetbrains.kotlin.cli.diagnosticFactoriesStorage
 import org.jetbrains.kotlin.cli.jvm.plugins.PluginCliParser
+import org.jetbrains.kotlin.cli.jvm.plugins.PluginsLoader
 import org.jetbrains.kotlin.cli.plugins.extractPluginClasspathAndOptions
 import org.jetbrains.kotlin.cli.plugins.processCompilerPluginsOptions
 import org.jetbrains.kotlin.cli.reportInfo
@@ -83,14 +84,14 @@ abstract class AbstractConfigurationPhase<A : CommonCompilerArguments>(
         val paths = computeKotlinPaths(this, arguments)?.also {
             kotlinPaths = it
         }
-        loadCompilerPlugins(paths, input, this, services[PluginCliParser.PluginsLoader::class.java])
+        loadCompilerPlugins(paths, input, this, services[PluginsLoader::class.java])
     }
 
     private fun loadCompilerPlugins(
         paths: KotlinPaths?,
         input: ArgumentsPipelineArtifact<A>,
         configuration: CompilerConfiguration,
-        pluginsLoader: PluginCliParser.PluginsLoader?,
+        pluginsLoader: PluginsLoader?,
     ) {
         val arguments = input.arguments
         val pluginClasspaths = arguments.pluginClasspaths.toMutableList()

@@ -35,27 +35,6 @@ import java.lang.ref.WeakReference
 import java.net.URLClassLoader
 
 object PluginCliParser {
-    @Suppress("DEPRECATION_ERROR")
-    interface PluginsLoader {
-        fun loadCompilerPluginRegistrars(pluginClasspaths: Collection<String>, parentDisposable: Disposable): List<CompilerPluginRegistrar>
-        fun loadCommandLineProcessors(pluginClasspaths: Collection<String>, parentDisposable: Disposable): List<CommandLineProcessor>
-
-        class ClassLoaderBased(val classLoader: URLClassLoader) : PluginsLoader {
-            override fun loadCompilerPluginRegistrars(
-                pluginClasspaths: Collection<String>,
-                parentDisposable: Disposable,
-            ): List<CompilerPluginRegistrar> {
-                return ServiceLoaderLite.loadImplementations(CompilerPluginRegistrar::class.java, classLoader)
-            }
-
-            override fun loadCommandLineProcessors(
-                pluginClasspaths: Collection<String>,
-                parentDisposable: Disposable,
-            ): List<CommandLineProcessor> {
-                return ServiceLoaderLite.loadImplementations(CommandLineProcessor::class.java, classLoader)
-            }
-        }
-    }
 
     @JvmStatic
     @Deprecated(
@@ -226,7 +205,7 @@ object PluginCliParser {
         val pluginConfigurations = extractPluginClasspathAndOptions(rawPluginConfigurations)
 
         val pluginInfos = pluginConfigurations.map { pluginConfiguration ->
-            val pluginsLoader = pluginsLoader ?: PluginsLoader.ClassLoaderBased(createClassLoader(pluginConfiguration.classpath, parentDisposable))
+            val pluginsLoader = pluginsLoader ?: ClassLoaderBased(createClassLoader(pluginConfiguration.classpath, parentDisposable))
             val compilerPluginRegistrars = pluginsLoader.loadCompilerPluginRegistrars(pluginConfiguration.classpath, parentDisposable)
 
             fun multiplePluginsErrorMessage(pluginObjects: List<Any>): String {
@@ -385,7 +364,7 @@ object PluginCliParser {
         pluginsLoader: PluginsLoader?,
     ) {
         if (pluginClasspaths.isNullOrEmpty()) return
-        val pluginsLoader = pluginsLoader ?: PluginsLoader.ClassLoaderBased(createClassLoader(pluginClasspaths, parentDisposable))
+        val pluginsLoader = pluginsLoader ?: ClassLoaderBased(createClassLoader(pluginClasspaths, parentDisposable))
         val compilerPluginRegistrars = pluginsLoader.loadCompilerPluginRegistrars(pluginClasspaths, parentDisposable)
 
         val registrarsById = compilerPluginRegistrars
@@ -442,5 +421,22 @@ object PluginCliParser {
         }
     }
 
+    private class ClassLoaderBased(val classLoader: URLClassLoader) : PluginsLoader {
+        override fun loadCompilerPluginRegistrars(
+            pluginClasspath: Collection<String>,
+            parentDisposable: Disposable,
+        ): List<CompilerPluginRegistrar> {
+            return ServiceLoaderLite.loadImplementations(CompilerPluginRegistrar::class.java, classLoader)
+        }
+
+        override fun loadCommandLineProcessors(
+            pluginClasspath: Collection<String>,
+            parentDisposable: Disposable,
+        ): List<CommandLineProcessor> {
+            return ServiceLoaderLite.loadImplementations(CommandLineProcessor::class.java, classLoader)
+        }
+    }
+
     class PluginProcessingError(message: String, cause: Throwable?) : Error(message, cause)
 }
+
