@@ -36,13 +36,20 @@ sourceSets {
 }
 
 abstract class CodeReviewTask : JavaExec() {
-    @set:Option(
+    @get:Option(
         "base",
         "The base git revision to compare the sources against. For example, origin/master (default) or HEAD~2"
     )
     @get:Input
     @get:Optional
-    var base: String? = null
+    abstract val base: Property<String>
+
+    @get:Option(
+        "output",
+        "The path to the output Markdown file"
+    )
+    @get:OutputFile
+    abstract val output: Property<RegularFile>
 }
 
 tasks.register<CodeReviewTask>("reviewCode") {
@@ -59,17 +66,16 @@ tasks.register<CodeReviewTask>("reviewCode") {
         }
     })
 
-    val output = layout.buildDirectory.file("reports/review/review.md")
+    output.convention(layout.buildDirectory.file("review.md"))
     val rootDir = rootDir
 
-    outputs.file(output)
     outputs.upToDateWhen { false }
 
     argumentProviders.add {
         listOf(
             output.get().asFile.path,
             rootDir.absolutePath
-        ) + listOfNotNull(base)
+        ) + listOfNotNull(base.get())
     }
 }
 
