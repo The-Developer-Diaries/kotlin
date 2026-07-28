@@ -464,8 +464,6 @@ class BackendWasmSymbols(
     }
 }
 
-private val String.coroutinesClassId get() = ClassId(StandardNames.COROUTINES_PACKAGE_FQ_NAME, Name.identifier(this))
-
 private object ClassIds {
     // WASM internal class
     private val String.wasmClassId get() = ClassId(WasmStandardClassIds.BASE_WASM_INTERNAL_PACKAGE, Name.identifier(this))
@@ -517,6 +515,7 @@ private object ClassIds {
     val anyref = ClassId(WasmStandardClassIds.BASE_WASM_INTERNAL_PACKAGE.child(Name.identifier("reftypes")), Name.identifier("anyref"))
     val WasmExport = ClassId(WasmStandardClassIds.BASE_WASM_PACKAGE, Name.identifier("WasmExport"))
 
+    private val String.coroutinesClassId get() = ClassId(StandardNames.COROUTINES_PACKAGE_FQ_NAME, Name.identifier(this))
     val coroutineImpl = "CoroutineImpl".coroutinesClassId
     val coroutineImplStackSwitching = "CoroutineImplStackSwitching".coroutinesClassId
 }
