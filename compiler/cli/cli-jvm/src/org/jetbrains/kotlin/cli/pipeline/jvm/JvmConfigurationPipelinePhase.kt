@@ -25,7 +25,6 @@ import org.jetbrains.kotlin.cli.pipeline.*
 import org.jetbrains.kotlin.cli.report
 import org.jetbrains.kotlin.cli.reportException
 import org.jetbrains.kotlin.cli.reportLog
-import org.jetbrains.kotlin.components.ClassLoadersCache
 import org.jetbrains.kotlin.config.*
 import org.jetbrains.kotlin.incremental.components.*
 import org.jetbrains.kotlin.load.kotlin.incremental.components.IncrementalCompilationComponents
@@ -81,7 +80,6 @@ object JvmConfigurationUpdater : ConfigurationUpdater<K2JVMCompilerArguments>() 
         configuration.allowNoSourceFiles = arguments.allowNoSourceFiles
         configuration.setupJvmSpecificArguments(arguments)
         configuration.setupIncrementalCompilationServices(arguments, services)
-        configuration.classloadersCache = services[ClassLoadersCache::class.java]
 
         configuration.phaseConfig = createPhaseConfig(arguments, jvmPhases).also {
             if (arguments.listPhases) it.list(jvmPhases)

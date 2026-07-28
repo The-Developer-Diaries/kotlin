@@ -13,7 +13,6 @@ package org.jetbrains.kotlin.config
  */
 
 import java.io.File
-import org.jetbrains.kotlin.components.ClassLoadersCache
 import org.jetbrains.kotlin.incremental.components.ICJvmMetadataTracker
 import org.jetbrains.kotlin.load.kotlin.incremental.components.IncrementalCompilationComponents
 import org.jetbrains.kotlin.modules.Module
@@ -180,10 +179,6 @@ object JVMConfigurationKeys {
     // Use java-direct as frontend Java facade
     @JvmField
     val USE_JAVA_DIRECT = CompilerConfigurationKey.create<Boolean>("USE_JAVA_DIRECT")
-
-    // Cache for classloaders to be used by compiler plugins (e.g. Kapt)
-    @JvmField
-    val CLASSLOADERS_CACHE = CompilerConfigurationKey.create<ClassLoadersCache>("CLASSLOADERS_CACHE")
 
 }
 
@@ -378,8 +373,4 @@ var CompilerConfiguration.useMetadataOnIncrementalClasspath: Boolean
 var CompilerConfiguration.useJavaDirect: Boolean
     get() = getBoolean(JVMConfigurationKeys.USE_JAVA_DIRECT)
     set(value) { put(JVMConfigurationKeys.USE_JAVA_DIRECT, value) }
-
-var CompilerConfiguration.classloadersCache: ClassLoadersCache?
-    get() = get(JVMConfigurationKeys.CLASSLOADERS_CACHE)
-    set(value) { putIfNotNull(JVMConfigurationKeys.CLASSLOADERS_CACHE, value) }
 
