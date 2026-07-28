@@ -6,7 +6,6 @@
 package org.jetbrains.kotlin.code.review
 
 import kotlinx.coroutines.future.asDeferred
-import org.jetbrains.kotlin.code.review.GitCLI.parseDiffText
 import java.io.File
 import java.net.URI
 import java.net.http.HttpClient
@@ -48,7 +47,7 @@ suspend fun main(args: Array<String>) {
 suspend fun fetchDiffFromGitHub(repository: String, from: GitRevision, to: GitSHA1): GitDiff {
     val origin = GitDiff.Origin.GitHub(repository, from, to)
     val text = fetchDiffTextFromGitHub(origin)
-    return GitDiff(parseDiffText(text), origin)
+    return GitDiff(parseGitDiffText(text), origin)
 }
 
 private suspend fun fetchDiffTextFromGitHub(origin: GitDiff.Origin.GitHub): String {
@@ -74,7 +73,8 @@ private suspend fun fetchDiffTextFromGitHub(origin: GitDiff.Origin.GitHub): Stri
 
 private class GitHubRenderingContext(val repository: String, val sha1: GitSHA1) : RenderingContext {
     override fun codeLink(path: ProjectFilePath, line: Int): String {
-        // Use plain=1 just in case it is a Markdown file. Otherwise, a link to the line won't work.
+        // Use plain=1 just in case it is a file with a custom rendering like Markdown.
+        // Otherwise, a link to the line won't work.
         return "[${path.fileName}:$line](https://github.com/$repository/blob/${sha1.sha1}/$path?plain=1#L$line)"
     }
 
