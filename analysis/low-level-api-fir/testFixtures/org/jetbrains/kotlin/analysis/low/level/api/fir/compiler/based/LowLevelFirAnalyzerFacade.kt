@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2023 JetBrains s.r.o. and Kotlin Programming Language contributors.
+ * Copyright 2010-2026 JetBrains s.r.o. and Kotlin Programming Language contributors.
  * Use of this source code is governed by the Apache 2.0 license that can be found in the license/LICENSE.txt file.
  */
 
@@ -8,6 +8,7 @@ package org.jetbrains.kotlin.analysis.low.level.api.fir.compiler.based
 import org.jetbrains.kotlin.analysis.low.level.api.fir.api.DiagnosticCheckerFilter
 import org.jetbrains.kotlin.analysis.low.level.api.fir.api.LLResolutionFacade
 import org.jetbrains.kotlin.analysis.low.level.api.fir.api.diagnostics
+import org.jetbrains.kotlin.analysis.low.level.api.fir.reportedDiagnostics
 import org.jetbrains.kotlin.diagnostics.KtDiagnostic
 import org.jetbrains.kotlin.fir.AbstractFirAnalyzerFacade
 import org.jetbrains.kotlin.fir.declarations.FirFile
@@ -51,7 +52,7 @@ open class LowLevelFirAnalyzerFacade(
 
         return allFirFiles.values.associateWith { firFile ->
             val ktFile = firFile.psi as KtFile
-            val diagnostics = ktFile.diagnostics(resolutionFacade, diagnosticCheckerFilter)
+            val diagnostics = ktFile.diagnostics(resolutionFacade, diagnosticCheckerFilter).reportedDiagnostics()
             @Suppress("UNCHECKED_CAST")
             diagnostics.toList() as List<KtDiagnostic>
         }
