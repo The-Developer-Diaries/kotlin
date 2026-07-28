@@ -25,7 +25,7 @@ suspend fun main(args: Array<String>) {
     val gitTree = GitWorkingTree(repoRoot, GitCLI)
     val agent = LocalClaudeAgent.create(gitTree.project)
 
-    val headSha1 = GitCLI.revParse(gitTree, GitRevision("HEAD"))
+    val headSha1 = gitTree.findHead()
     val repository = "JetBrains/kotlin"
 
     val diff = fetchDiffFromGitHub(repository, GitRevision(baseRefString), headSha1)
