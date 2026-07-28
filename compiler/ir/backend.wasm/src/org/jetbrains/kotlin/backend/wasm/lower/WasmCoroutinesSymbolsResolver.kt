@@ -17,7 +17,7 @@ import org.jetbrains.kotlin.ir.util.irCall
 import org.jetbrains.kotlin.ir.util.resolveFakeOverrideOrSelf
 import org.jetbrains.kotlin.ir.visitors.transformChildrenVoid
 
-internal class WasmCoroutinesSymbolsResolver(val context: WasmBackendContext) : BodyLoweringPass {
+internal class WasmCoroutinesSymbolsResolver(context: WasmBackendContext) : BodyLoweringPass {
 
     private val transformer = context.wasmSymbols.coroutinesStackSwitchingIntrinsics?.let {
         WasmCoroutinesStackSwitchingIntrinsicsTransformer(context.wasmSymbols, it)
