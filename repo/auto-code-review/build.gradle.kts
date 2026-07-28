@@ -73,7 +73,7 @@ tasks.register<CodeReviewTask>("reviewCode") {
 
     argumentProviders.add {
         listOf(
-            output.get().asFile.path,
+            output.get().asFile.absolutePath,
             rootDir.absolutePath
         ) + listOfNotNull(base.getOrNull())
     }
