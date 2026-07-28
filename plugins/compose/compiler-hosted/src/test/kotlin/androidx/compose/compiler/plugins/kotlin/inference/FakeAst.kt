@@ -476,13 +476,27 @@ private fun <T> List<T>.sameContentAs(other: List<T>) =
 private fun <K, V> Map<K, V>.toPairs() =
     entries.map { entry -> entry.key to entry.value }
 
-private fun List<Annotation>.item(): Item? =
-    firstOrNull { it.name == "ComposableTarget" }?.let { Token(it.value) }
-        ?: firstOrNull { it.name == "ComposableOpenTarget" }?.let { Open(it.value.toInt()) }
+private fun List<Annotation>.item(): Item? {
+    val allowedTokens = filter { it.name == "ComposableTarget" }.map { it.value }.toSet()
+    if (allowedTokens.isEmpty()) {
+        return null
+    }
+    return firstOrNull { it.name == "ComposableOpenTarget" }?.let { openTarget ->
+        Open(openTarget.value.toInt(), allowedTokens)
+    } ?: if (allowedTokens.size == 1) {
+        Token(allowedTokens.first())
+    } else {
+        Open(-1, allowedTokens)
+    }
+}
 
 val composable = listOf(Annotation("Composable"))
 val uiTarget = listOf(Annotation("ComposableTarget", "UI"))
 val vectorTarget = listOf(Annotation("ComposableTarget", "Vector"))
+val wTarget = listOf(Annotation("ComposableTarget", "w"))
+val xTarget = listOf(Annotation("ComposableTarget", "x"))
+val yTarget = listOf(Annotation("ComposableTarget", "y"))
+val zTarget = listOf(Annotation("ComposableTarget", "z"))
 fun composableLambda() = FunctionType("lambda", annotations = composable)
 fun call(name: String, vararg args: Node) = Call(Ref(name), arguments = args.toList())
 fun lambda(vararg body: Node) = Lambda(type = composableLambda(), body = body.toList())

@@ -116,14 +116,14 @@ object ComposeErrorMessages : BaseDiagnosticRendererFactory() {
 
         map.put(
             ComposeErrors.COMPOSE_APPLIER_CALL_MISMATCH,
-            "Calling a {1} composable function where a {0} composable was expected",
+            "Calling a composable function compatible with {1} where one compatible with {0} was expected",
             KtDiagnosticRenderers.TO_STRING,
             KtDiagnosticRenderers.TO_STRING
         )
 
         map.put(
             ComposeErrors.COMPOSE_APPLIER_PARAMETER_MISMATCH,
-            "A {1} composable parameter was provided where a {0} composable was expected",
+            "A composable parameter compatible with {1} was provided where one compatible with {0} was expected",
             KtDiagnosticRenderers.TO_STRING,
             KtDiagnosticRenderers.TO_STRING
         )

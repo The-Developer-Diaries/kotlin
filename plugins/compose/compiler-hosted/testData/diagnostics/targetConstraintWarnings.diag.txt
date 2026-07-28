@@ -1,0 +1,3 @@
+/module_main_targetConstraintWarnings.kt:43:9: warning: Calling a composable function compatible with the {Y, Z} appliers where one compatible with the {W, X} appliers was expected
+
+/module_main_targetConstraintWarnings.kt:49:9: warning: Calling a composable function compatible with the {W, X} appliers where one compatible with the {Y, Z} appliers was expected
