@@ -275,16 +275,8 @@ class BackendWasmSymbols(
         val resumeWithIntrinsic by CallableIds.resumeWithIntrinsic.functionSymbol()
         val resumeWithImpl by CallableIds.resumeWithImpl.functionSymbol()
 
-        val createCoroutineUninterceptedIntrinsicsStackSwitching: List<IrSimpleFunctionSymbol> by run {
-            val createCoroutineUninterceptedIntrinsic0StackSwitching by CallableIds.createCoroutineUninterceptedIntrinsic0StackSwitching.functionSymbol()
-            val createCoroutineUninterceptedIntrinsic1StackSwitching by CallableIds.createCoroutineUninterceptedIntrinsic1StackSwitching.functionSymbol()
-            lazyOf(
-                listOf(
-                    createCoroutineUninterceptedIntrinsic0StackSwitching,
-                    createCoroutineUninterceptedIntrinsic1StackSwitching,
-                )
-            )
-        }
+        val createCoroutineUninterceptedIntrinsic0StackSwitching by CallableIds.createCoroutineUninterceptedIntrinsic0StackSwitching.functionSymbol()
+        val createCoroutineUninterceptedIntrinsic1StackSwitching by CallableIds.createCoroutineUninterceptedIntrinsic1StackSwitching.functionSymbol()
 
         val suspendCoroutineUninterceptedOrReturnIntrinsicStackSwitching by
         CallableIds.suspendCoroutineUninterceptedOrReturnIntrinsicStackSwitching.functionSymbol()
@@ -304,16 +296,8 @@ class BackendWasmSymbols(
         CallableIds.createSimpleCoroutineFromSuspendFunction.functionSymbol()
     }
 
-    val createCoroutineUninterceptedIntrinsics: List<IrSimpleFunctionSymbol> by run {
-        val createCoroutineUninterceptedIntrinsic0 by CallableIds.createCoroutineUninterceptedIntrinsic0.functionSymbol()
-        val createCoroutineUninterceptedIntrinsic1 by CallableIds.createCoroutineUninterceptedIntrinsic1.functionSymbol()
-        lazyOf(
-            listOf(
-                createCoroutineUninterceptedIntrinsic0,
-                createCoroutineUninterceptedIntrinsic1,
-            )
-        )
-    }
+    val createCoroutineUninterceptedIntrinsic0 by CallableIds.createCoroutineUninterceptedIntrinsic0.functionSymbol()
+    val createCoroutineUninterceptedIntrinsic1 by CallableIds.createCoroutineUninterceptedIntrinsic1.functionSymbol()
 
     val suspendCoroutineUninterceptedOrReturnIntrinsic by
     CallableIds.suspendCoroutineUninterceptedOrReturnIntrinsic.functionSymbol()

@@ -7,6 +7,7 @@ package org.jetbrains.kotlin.backend.wasm.lower
 
 import org.jetbrains.kotlin.backend.common.BodyLoweringPass
 import org.jetbrains.kotlin.backend.common.IrElementTransformerVoidWithContext
+import org.jetbrains.kotlin.backend.wasm.BackendWasmSymbols
 import org.jetbrains.kotlin.backend.wasm.WasmBackendContext
 import org.jetbrains.kotlin.ir.declarations.IrDeclaration
 import org.jetbrains.kotlin.ir.expressions.IrBody
@@ -17,15 +18,23 @@ import org.jetbrains.kotlin.ir.util.resolveFakeOverrideOrSelf
 import org.jetbrains.kotlin.ir.visitors.transformChildrenVoid
 
 internal class WasmCoroutinesSymbolsResolver(val context: WasmBackendContext) : BodyLoweringPass {
+
+    private val transformer = context.wasmSymbols.coroutinesStackSwitchingIntrinsics?.let {
+        WasmCoroutinesStackSwitchingIntrinsicsTransformer(context.wasmSymbols, it)
+    }
+
     override fun lower(irBody: IrBody, container: IrDeclaration) {
-        if (context.wasmUseStackSwitching) {
-            irBody.transformChildrenVoid(WasmCoroutinesStackSwitchingIntrinsicsTransformer(context))
+        transformer?.let {
+            irBody.transformChildrenVoid(transformer)
         }
     }
 }
 
-private class WasmCoroutinesStackSwitchingIntrinsicsTransformer(val context: WasmBackendContext) :
-    IrElementTransformerVoidWithContext() {
+private class WasmCoroutinesStackSwitchingIntrinsicsTransformer(
+    private val wasmSymbols: BackendWasmSymbols,
+    private val stackSwitchingIntrinsics: BackendWasmSymbols.CoroutinesStackSwitchingIntrinsics,
+) : IrElementTransformerVoidWithContext() {
+
     override fun visitCall(expression: IrCall): IrExpression {
         expression.transformChildrenVoid(this)
 
@@ -33,19 +42,15 @@ private class WasmCoroutinesStackSwitchingIntrinsicsTransformer(val context: Was
         if (!symbol.isBound) return expression
 
         val realOwner = symbol.owner.resolveFakeOverrideOrSelf()
-        val stackSwitchingIntrinsics = context.wasmSymbols.coroutinesStackSwitchingIntrinsics!!
 
-        if (realOwner.symbol == context.wasmSymbols.suspendCoroutineUninterceptedOrReturnIntrinsic) {
-            return irCall(expression, stackSwitchingIntrinsics.suspendCoroutineUninterceptedOrReturnIntrinsicStackSwitching)
+        return when (realOwner.symbol) {
+            wasmSymbols.suspendCoroutineUninterceptedOrReturnIntrinsic ->
+                irCall(expression, stackSwitchingIntrinsics.suspendCoroutineUninterceptedOrReturnIntrinsicStackSwitching)
+            wasmSymbols.createCoroutineUninterceptedIntrinsic0 ->
+                irCall(expression, stackSwitchingIntrinsics.createCoroutineUninterceptedIntrinsic0StackSwitching)
+            wasmSymbols.createCoroutineUninterceptedIntrinsic1 ->
+                irCall(expression, stackSwitchingIntrinsics.createCoroutineUninterceptedIntrinsic1StackSwitching)
+            else -> expression
         }
-
-        val createCoroutineSymbols = context.wasmSymbols.createCoroutineUninterceptedIntrinsics
-        val idx = createCoroutineSymbols.indexOf(realOwner.symbol)
-
-        if (idx != -1) {
-            return irCall(expression, stackSwitchingIntrinsics.createCoroutineUninterceptedIntrinsicsStackSwitching[idx])
-        }
-
-        return expression
     }
 }
