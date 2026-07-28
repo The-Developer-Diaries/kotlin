@@ -98,6 +98,9 @@ abstract class KotlinCompile @Inject constructor(
     @get:Input
     internal val enableJvmClasspathMetadata: Property<Boolean> = objectFactory.propertyWithConvention(false)
 
+    @get:Internal
+    internal abstract val enableUnsafeIncrementalCompilationForMultiplatform: Property<Boolean>
+
     @get:Nested
     abstract val classpathSnapshotProperties: ClasspathSnapshotProperties
 
@@ -534,6 +537,7 @@ abstract class KotlinCompile @Inject constructor(
             usePreciseJavaTracking = usePreciseJavaTracking,
             /* Disabled on JVM in favor of classpath snapshot machinery */
             withAbiSnapshot = false,
+            enableUnsafeIncrementalCompilationForMultiplatform = enableUnsafeIncrementalCompilationForMultiplatform.get(),
         )
     }
 

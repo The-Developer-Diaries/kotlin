@@ -45,6 +45,7 @@ import org.jetbrains.kotlin.gradle.utils.getFile
 import org.jetbrains.kotlin.gradle.utils.newInstance
 import org.jetbrains.kotlin.gradle.utils.toPathsArray
 import org.jetbrains.kotlin.incremental.ClasspathChanges
+import org.jetbrains.kotlin.incremental.IncrementalCompilationFeatures
 import org.jetbrains.kotlin.library.KlibConstants.KLIB_MANIFEST_FILE_NAME
 import org.jetbrains.kotlin.library.loader.KlibLoader
 import java.io.File
@@ -134,6 +135,9 @@ abstract class Kotlin2JsCompile @Inject constructor(
 
     @get:Internal
     internal abstract val getIsWasmPlatform: Property<Boolean>
+
+    @get:Internal
+    internal abstract val enableUnsafeIncrementalCompilationForMultiplatform: Property<Boolean>
 
     @Suppress("DeprecatedCallableAddReplaceWith")
     @Deprecated("KTIJ-25227: Necessary override for IDEs < 2023.2", level = DeprecationLevel.ERROR)
@@ -295,6 +299,12 @@ abstract class Kotlin2JsCompile @Inject constructor(
         get() = super.incrementalProps - listOf(libraries) + listOf(packedLibraries, friendDependencies)
 
     protected open fun processArgsBeforeCompile(args: K2JSCompilerArguments) = Unit
+
+    override fun makeIncrementalCompilationFeatures(): IncrementalCompilationFeatures {
+        return super.makeIncrementalCompilationFeatures().copy(
+            enableUnsafeIncrementalCompilationForMultiplatform = enableUnsafeIncrementalCompilationForMultiplatform.get(),
+        )
+    }
 
     protected open fun contributeAdditionalCompilerArguments(context: ContributeCompilerArgumentsContext<K2JSCompilerArguments>) {
         context.primitive { args ->
