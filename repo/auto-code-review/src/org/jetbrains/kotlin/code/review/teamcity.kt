@@ -74,6 +74,7 @@ private suspend fun fetchDiffTextFromGitHub(origin: GitDiff.Origin.GitHub): Stri
 
 private class GitHubRenderingContext(val repository: String, val sha1: GitSHA1) : RenderingContext {
     override fun codeLink(path: ProjectFilePath, line: Int): String {
+        // Use plain=1 just in case it is a Markdown file. Otherwise, a link to the line won't work.
         return "[${path.fileName}:$line](https://github.com/$repository/blob/${sha1.sha1}/$path?plain=1#L$line)"
     }
 
