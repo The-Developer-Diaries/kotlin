@@ -26,6 +26,7 @@ import org.jetbrains.kotlin.fir.declarations.utils.sourceElement
 import org.jetbrains.kotlin.fir.java.declarations.*
 import org.jetbrains.kotlin.fir.java.enhancement.FirJavaDeclarationList
 import org.jetbrains.kotlin.fir.java.enhancement.FirLazyJavaAnnotationList
+import org.jetbrains.kotlin.fir.java.enhancement.FirLazyJavaAnnotationMutableList
 import org.jetbrains.kotlin.fir.resolve.defaultType
 import org.jetbrains.kotlin.fir.symbols.FirBasedSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.*
@@ -516,11 +517,11 @@ private fun convertJavaFieldToFir(
                 .resolveIfJavaType(session, javaTypeParameterStack, fakeSource, mode = FirJavaTypeConversionMode.ANNOTATION_MEMBER)
             resolvePhase = FirResolvePhase.ANALYZED_DEPENDENCIES
             origin = javaOrigin(javaField.isFromSource)
+            // Deferred to avoid re-entering the in-flight ClassId while FirJavaClass.declarations is materialized (KT-74097).
+            annotations = FirLazyJavaAnnotationMutableList(javaField, moduleData)
+            deprecationsProvider = FirJavaLazyDeprecationsProvider(annotations, session)
         }.apply {
             containingClassForStaticMemberAttr = classId.toLookupTag()
-            // TODO: check if this works properly with annotations that take the enum class as an argument
-            setAnnotationsFromJava(session, fakeSource, javaField)
-            replaceDeprecationsProvider(annotations.getDeprecationsProviderFromAnnotations(session, fromJava = true))
         }
         else -> buildJavaField {
             this.containingClassSymbol = containingClassSymbol
