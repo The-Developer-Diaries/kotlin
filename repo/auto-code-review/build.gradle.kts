@@ -49,7 +49,7 @@ abstract class CodeReviewTask : JavaExec() {
         "The path to the output Markdown file"
     )
     @get:OutputFile
-    abstract val output: Property<RegularFile>
+    abstract val output: RegularFileProperty
 }
 
 tasks.register<CodeReviewTask>("reviewCode") {
@@ -75,7 +75,7 @@ tasks.register<CodeReviewTask>("reviewCode") {
         listOf(
             output.get().asFile.path,
             rootDir.absolutePath
-        ) + listOfNotNull(base.get())
+        ) + listOfNotNull(base.getOrNull())
     }
 }
 
