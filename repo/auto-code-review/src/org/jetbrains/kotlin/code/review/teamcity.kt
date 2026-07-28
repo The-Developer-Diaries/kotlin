@@ -79,12 +79,12 @@ private class GitHubRenderingContext(val repository: String, val sha1: GitSHA1) 
     override fun markdownLink(path: ProjectFilePath, title: String): String {
         return "[$title](https://github.com/$repository/blob/${sha1.sha1}/$path#${slugifyMarkdownTitle(title)})"
     }
-//
-//    override fun localLink(text: String, title: String): String? {
-//        // When posting Markdown as a GitHub comment, it is tricky to have a link to a title in the same comment.
-//        // Let's keep it unsupported for now.
-//        return null
-//    }
+
+    override fun localLink(text: String, title: String): String? {
+        // When posting Markdown as a GitHub comment, it is tricky to have a link to a title in the same comment.
+        // Let's keep it unsupported for now.
+        return null
+    }
 
     override fun describeDiff(origin: GitDiff.Origin): String = when (origin) {
         is GitDiff.Origin.Local ->
