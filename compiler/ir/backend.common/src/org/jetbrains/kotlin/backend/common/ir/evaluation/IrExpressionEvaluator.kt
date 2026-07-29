@@ -39,15 +39,22 @@ fun evaluate(
     irBuiltIns: IrBuiltIns,
     inlineConstTracker: InlineConstTracker?,
     isFloatingPointOptimizationEnabled: Boolean,
+    isFloatingPointToStringEnabled: Boolean,
 ): IrExpression? {
     val inlineResult = expression.accept(IrConstFieldInliner(irFile, inlineConstTracker), null)
-    val evaluationResult = (inlineResult ?: expression).accept(IrExpressionEvaluator(irBuiltIns, isFloatingPointOptimizationEnabled), null)
+    val visitor = IrExpressionEvaluator(
+        irBuiltIns = irBuiltIns,
+        isFloatingPointOptimizationEnabled = isFloatingPointOptimizationEnabled,
+        isFloatingPointToStringEnabled = isFloatingPointToStringEnabled
+    )
+    val evaluationResult = (inlineResult ?: expression).accept(visitor, null)
     return evaluationResult ?: inlineResult
 }
 
 private class IrExpressionEvaluator(
     private val irBuiltIns: IrBuiltIns,
     private val isFloatingPointOptimizationEnabled: Boolean,
+    private val isFloatingPointToStringEnabled: Boolean,
 ) : IrVisitor<IrExpression?, Nothing?>() {
     private fun IrExpression.evaluateAsConst(): IrConst? = this.accept(this@IrExpressionEvaluator, null) as? IrConst
 
@@ -88,6 +95,9 @@ private class IrExpressionEvaluator(
             when (operands.size) {
                 1 -> {
                     val type = owner.parameters[0].type.toCompileTimeType() ?: return null
+                    if (!isFloatingPointToStringEnabled) {
+                        if (name == "toString" && (type == CompileTimeType.DOUBLE || type == CompileTimeType.FLOAT)) return null
+                    }
                     val value = operands[0].getCastedValue() ?: return null
                     evalUnaryOp(name, type, value)
                 }

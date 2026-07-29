@@ -21,7 +21,8 @@ import org.jetbrains.kotlin.ir.visitors.IrTransformer
  */
 class ConstEvaluationLowering(
     val context: CommonBackendContext,
-    private val isFloatingPointOptimizationEnabled: Boolean = true
+    private val isFloatingPointOptimizationEnabled: Boolean = true,
+    private val isFloatingPointToStringEnabled: Boolean = true,
 ) : FileLoweringPass {
     private val inlineConstTracker = context.configuration[CommonConfigurationKeys.INLINE_CONST_TRACKER]
 
@@ -34,7 +35,8 @@ class ConstEvaluationLowering(
                     irFile,
                     context.irBuiltIns,
                     inlineConstTracker,
-                    isFloatingPointOptimizationEnabled = isFloatingPointOptimizationEnabled
+                    isFloatingPointOptimizationEnabled = isFloatingPointOptimizationEnabled,
+                    isFloatingPointToStringEnabled = isFloatingPointToStringEnabled,
                 )
                 return evaluateResult ?: superResult
             }
