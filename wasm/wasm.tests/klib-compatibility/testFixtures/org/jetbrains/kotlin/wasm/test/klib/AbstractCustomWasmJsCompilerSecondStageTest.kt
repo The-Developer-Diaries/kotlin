@@ -48,6 +48,7 @@ import org.jetbrains.kotlin.wasm.test.handlers.WasmFolderGroupingStageBoxWithV8O
 import org.jetbrains.kotlin.wasm.test.preprocessors.WasmJsExportBoxPreprocessor
 import org.jetbrains.kotlin.wasm.test.providers.WasmJsLauncherAdditionalSourceProvider
 import org.jetbrains.kotlin.wasm.test.setupStepsForWasmFirstStageUpToSerialization
+import org.jetbrains.kotlin.wasm.test.wasmReflectionPackageNameAnnotation
 import org.jetbrains.kotlin.wasm.test.utils.configureIgnoredTestSuppressor
 import org.junit.jupiter.api.Tag
 import java.io.File
@@ -104,6 +105,7 @@ open class AbstractCustomWasmJsCompilerSecondStageTest(val testDataRoot: String 
             }
 
             useConfigurators(::WasmSecondStageEnvironmentConfigurator.bind(WasmTarget.JS))
+            useAdditionalService { wasmReflectionPackageNameAnnotation }
         }
         nonGroupingStage {
             useGroupingTestIsolators(::WasmGroupingTestIsolator)

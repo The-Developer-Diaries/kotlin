@@ -19,6 +19,7 @@ import org.jetbrains.kotlin.test.services.ApplicationDisposableProvider
 import org.jetbrains.kotlin.test.services.BatchingPackageInserter
 import org.jetbrains.kotlin.test.services.KotlinStandardLibrariesPathProvider
 import org.jetbrains.kotlin.test.services.KotlinTestInfo
+import org.jetbrains.kotlin.test.services.ReflectionPackageNameOptInConfigurator
 import org.jetbrains.kotlin.test.services.StandardLibrariesPathProviderForKotlinProject
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.TestInfo
@@ -33,6 +34,7 @@ abstract class AbstractTwoStageKotlinCompilerTest : AbstractTwoStageKotlinCompil
             useAdditionalService { createApplicationDisposableProvider() }
             useAdditionalService { createKotlinStandardLibrariesPathProvider() }
             useSourcePreprocessor(::BatchingPackageInserter)
+            useConfigurators(::ReflectionPackageNameOptInConfigurator)
             useFailureSuppressors(::IrValidationErrorChecker)
         }
 
