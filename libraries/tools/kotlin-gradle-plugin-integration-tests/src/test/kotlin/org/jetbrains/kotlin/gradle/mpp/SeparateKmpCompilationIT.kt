@@ -13,6 +13,7 @@ import org.gradle.kotlin.dsl.invoke
 import org.gradle.kotlin.dsl.kotlin
 import org.gradle.util.GradleVersion
 import org.jetbrains.kotlin.cli.common.arguments.CommonCompilerArguments
+import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.plugin.KotlinCompilerArgumentsProducer
 import org.jetbrains.kotlin.gradle.plugin.PropertiesProvider
 import org.jetbrains.kotlin.gradle.testbase.*
@@ -489,6 +490,22 @@ class SeparateKmpCompilationIT : KGPBaseTest() {
                 collectFusEvents(*rerunTask(":compileKotlinJs")).count {
                     it.startsWith(eventPrefix)
                 })
+        }
+    }
+
+    @DisplayName("Fragment dependencies should be propagated to non-default common source sets (single Linux target)")
+    @GradleTest
+    fun nonDefaultHierarchySingleLinux(gradleVersion: GradleVersion) {
+        project("separateCompilationSchemeInNonDefaultHierarchy_singleLinux", gradleVersion) {
+            buildAndFail("compileKotlinLinuxX64")
+        }
+    }
+
+    @DisplayName("Fragment dependencies should be propagated to non-default common source sets (multiple Linux targets)")
+    @GradleTest
+    fun nonDefaultHierarchyMultipleLinux(gradleVersion: GradleVersion) {
+        project("separateCompilationSchemeInNonDefaultHierarchy_multipleLinux", gradleVersion) {
+            buildAndFail("compileKotlinLinuxX64")
         }
     }
 
