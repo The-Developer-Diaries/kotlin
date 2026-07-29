@@ -9,6 +9,9 @@ interface RenderingContext {
     fun codeLink(path: ProjectFilePath, line: Int): String
     fun markdownLink(path: ProjectFilePath, title: String): String
 
+    /**
+     * Returns a Markdown link to [title] in the report, or `null` if unsupported.
+     */
     fun localLink(text: String, title: String): String? {
         val anchor = slugifyMarkdownTitle(title)
         return "[$text](#$anchor)"
@@ -20,7 +23,7 @@ interface RenderingContext {
 }
 
 val GitDiff.Origin.GitHub.compareMarkdownLink: String
-    get() = "[${base.rev}...${to.rev}](https://github.com/${repository}/compare/${base.rev}...${to.rev})"
+    get() = "[${base.rev}...${to.sha1}](https://github.com/${repository}/compare/${base.rev}...${to.rev})"
 
 private const val WARNING_EMOJI = "⚠\uFE0F"
 

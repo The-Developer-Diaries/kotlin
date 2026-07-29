@@ -17,9 +17,10 @@ suspend fun main(args: Array<String>) {
     val baseRevString = args.getOrNull(2) ?: "origin/master"
 
     val gitTree = GitWorkingTree(repoRoot, GitCLI)
+    val baseRev = GitRevision(baseRevString)
     val agent = LocalClaudeAgent.create(gitTree.project)
 
-    val diff = gitTree.getDiffFromMergeBase(GitRevision(baseRevString))
+    val diff = gitTree.getDiffFromMergeBase(baseRev)
     val reviewResult = runReview(gitTree.project, diff, agent)
 
     writeLocalReport(output, gitTree.project, reviewResult)

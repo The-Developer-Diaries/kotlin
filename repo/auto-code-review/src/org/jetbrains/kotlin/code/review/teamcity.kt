@@ -25,13 +25,29 @@ suspend fun main(args: Array<String>) {
     val agent = LocalClaudeAgent.create(gitTree.project)
 
     val headSha1 = gitTree.findHead()
-    val repository = "JetBrains/kotlin"
+    val baseRev = GitRevision(baseRevString)
 
-    val diff = fetchDiffFromGitHub(repository, GitRevision(baseRevString), headSha1)
+    // Could probably be inferred from TeamCity parameters or `git remote get-url`,
+    // but this isn't worth the hassle.
+    val gitHubRepository = "JetBrains/kotlin"
+
+    /*
+    TeamCity uses the shallow clone by default, so computing the diff locally is not possible.
+
+    Using full clone instead is undesirable for performance reasons.
+
+    Potential trade-off: set specific clone depth with `teamcity.git.agent.shallowCloneDepth`.
+    But it is clumsy, as it would limit the number of commits between the base branch and HEAD;
+    also, that approach would still require to fetch the base branch locally or find the merge base in
+    another way.
+
+    Instead, let's trivially fetch the diff from GitHub:
+    */
+    val diff = fetchDiffFromGitHub(gitHubRepository, baseRev, headSha1)
 
     val reviewResult = runReview(gitTree.project, diff, agent)
 
-    val text = with(GitHubRenderingContext(repository, headSha1)) {
+    val text = with(GitHubRenderingContext(gitHubRepository, headSha1)) {
         render(reviewResult)
     }
     output.writeText(text)
@@ -44,22 +60,21 @@ suspend fun main(args: Array<String>) {
     }
 }
 
-suspend fun fetchDiffFromGitHub(repository: String, from: GitRevision, to: GitSHA1): GitDiff {
-    val origin = GitDiff.Origin.GitHub(repository, from, to)
+suspend fun fetchDiffFromGitHub(repository: String, base: GitRevision, to: GitSHA1): GitDiff {
+    val origin = GitDiff.Origin.GitHub(repository, base, to)
     val text = fetchDiffTextFromGitHub(origin)
     return GitDiff(parseGitDiffText(text), origin)
 }
 
 private suspend fun fetchDiffTextFromGitHub(origin: GitDiff.Origin.GitHub): String {
-    val client = HttpClient.newHttpClient()
-
     val rawDiffUrl = origin.rawDiffUrl
+
     val request = HttpRequest.newBuilder()
         .uri(URI.create(rawDiffUrl))
         .GET()
         .build()
 
-    val response = client.sendAsync(
+    val response = HttpClient.newHttpClient().sendAsync(
         request,
         HttpResponse.BodyHandlers.ofString()
     ).asDeferred().await()
