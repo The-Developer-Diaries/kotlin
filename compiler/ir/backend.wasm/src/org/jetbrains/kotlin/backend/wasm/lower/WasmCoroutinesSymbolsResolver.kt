@@ -6,34 +6,39 @@
 package org.jetbrains.kotlin.backend.wasm.lower
 
 import org.jetbrains.kotlin.backend.common.BodyLoweringPass
-import org.jetbrains.kotlin.backend.common.IrElementTransformerVoidWithContext
 import org.jetbrains.kotlin.backend.wasm.BackendWasmSymbols
 import org.jetbrains.kotlin.backend.wasm.WasmBackendContext
 import org.jetbrains.kotlin.ir.declarations.IrDeclaration
+import org.jetbrains.kotlin.ir.declarations.IrModuleFragment
 import org.jetbrains.kotlin.ir.expressions.IrBody
 import org.jetbrains.kotlin.ir.expressions.IrCall
 import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.util.irCall
 import org.jetbrains.kotlin.ir.util.resolveFakeOverrideOrSelf
+import org.jetbrains.kotlin.ir.visitors.IrElementTransformerVoid
 import org.jetbrains.kotlin.ir.visitors.transformChildrenVoid
 
 internal class WasmCoroutinesSymbolsResolver(context: WasmBackendContext) : BodyLoweringPass {
 
-    private val transformer = context.wasmSymbols.coroutinesStackSwitchingIntrinsics?.let {
+    private val stackSwitchingIntrinsicsTransformer = context.wasmSymbols.coroutinesStackSwitchingIntrinsics?.let {
         WasmCoroutinesStackSwitchingIntrinsicsTransformer(context.wasmSymbols, it)
     }
 
-    override fun lower(irBody: IrBody, container: IrDeclaration) {
-        transformer?.let {
-            irBody.transformChildrenVoid(transformer)
+    override fun lower(irModule: IrModuleFragment) {
+        if (stackSwitchingIntrinsicsTransformer != null) {
+            super.lower(irModule)
         }
+    }
+
+    override fun lower(irBody: IrBody, container: IrDeclaration) {
+        irBody.transformChildrenVoid(stackSwitchingIntrinsicsTransformer!!)
     }
 }
 
 private class WasmCoroutinesStackSwitchingIntrinsicsTransformer(
     private val wasmSymbols: BackendWasmSymbols,
     private val stackSwitchingIntrinsics: BackendWasmSymbols.CoroutinesStackSwitchingIntrinsics,
-) : IrElementTransformerVoidWithContext() {
+) : IrElementTransformerVoid() {
 
     override fun visitCall(expression: IrCall): IrExpression {
         expression.transformChildrenVoid(this)
