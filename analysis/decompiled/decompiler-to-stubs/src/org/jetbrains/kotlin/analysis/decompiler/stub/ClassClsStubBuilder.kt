@@ -174,7 +174,7 @@ private class ClassClsStubBuilder(
                         c.nameResolver.getName(classProto.inlineClassUnderlyingPropertyName).ref()
                     },
                     valueClassUnderlyingType = valueClassRepresentation?.let {
-                        typeStubBuilder.createKotlinTypeBean(classProto.inlineClassUnderlyingType(c.typeTable))
+                        typeStubBuilder.createKotlinTypeBean(valueClassUnderlyingType())
                     },
                 )
             }
@@ -184,6 +184,19 @@ private class ClassClsStubBuilder(
     private fun valueClassRepresentation(): KotlinValueClassRepresentation? = when {
         classProto.hasInlineClassUnderlyingPropertyName() -> KotlinValueClassRepresentation.INLINE_CLASS
         else -> null
+    }
+
+    private fun valueClassUnderlyingType(): ProtoBuf.Type? {
+        classProto.inlineClassUnderlyingType(c.typeTable)?.let { return it }
+
+        val propertyName = c.nameResolver.getName(classProto.inlineClassUnderlyingPropertyName)
+        return classProto.propertyList.singleOrNull { property ->
+            c.nameResolver.getName(property.name) == propertyName &&
+            !property.hasReceiver() &&
+            !property.hasCompanionExtensionReceiver() &&
+            property.contextParameterList.isEmpty() &&
+            property.contextReceiverTypes(c.typeTable).isEmpty()
+        }?.returnType(c.typeTable)
     }
 
     private fun createConstructorStub() {
