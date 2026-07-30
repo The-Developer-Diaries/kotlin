@@ -157,6 +157,7 @@ private class ClassClsStubBuilder(
             ProtoBuf.Class.Kind.ENUM_ENTRY -> error("Enum entries have to be created as members via '${::createEnumEntryStubs.name}'")
 
             else -> {
+                val valueClassRepresentation = valueClassRepresentation()
                 KotlinClassStubImpl(
                     parent = parentStub,
                     qualifiedName = fqName.ref(),
@@ -168,7 +169,13 @@ private class ClassClsStubBuilder(
                     isLocal = false,
                     isTopLevel = isTopLevel,
                     kdocText = kdoc,
-                    valueClassRepresentation = valueClassRepresentation(),
+                    valueClassRepresentation = valueClassRepresentation,
+                    valueClassUnderlyingPropertyNameRef = valueClassRepresentation?.let {
+                        c.nameResolver.getName(classProto.inlineClassUnderlyingPropertyName).ref()
+                    },
+                    valueClassUnderlyingType = valueClassRepresentation?.let {
+                        typeStubBuilder.createKotlinTypeBean(classProto.inlineClassUnderlyingType(c.typeTable))
+                    },
                 )
             }
         }
