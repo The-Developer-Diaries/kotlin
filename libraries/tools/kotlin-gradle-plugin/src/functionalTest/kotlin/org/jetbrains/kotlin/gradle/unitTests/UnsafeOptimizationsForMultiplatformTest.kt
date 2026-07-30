@@ -5,10 +5,13 @@
 
 package org.jetbrains.kotlin.gradle.unitTests
 
+import org.jetbrains.kotlin.gradle.plugin.diagnostics.KotlinToolingDiagnostics
 import org.jetbrains.kotlin.gradle.plugin.extraProperties
 import org.jetbrains.kotlin.gradle.tasks.Kotlin2JsCompile
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import org.jetbrains.kotlin.gradle.util.assertContainsDiagnostic
 import org.jetbrains.kotlin.gradle.util.buildKMPWithAllBackends
+import org.jetbrains.kotlin.gradle.util.buildProjectWithJvm
 import org.jetbrains.kotlin.gradle.utils.withType
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -46,6 +49,24 @@ class UnsafeOptimizationsForMultiplatformTest {
             enabledProperty = "kotlin.internal.wasm.enableUnsafeOptimizationsForMultiplatform",
             expectedJvm = false, expectedJs = false, expectedWasm = true,
         )
+    }
+
+    @Test
+    fun deprecatedGlobalPropertySetToTrueIsReportedAsError() {
+        assertDeprecationReported(propertyValue = "true")
+    }
+
+    @Test
+    fun deprecatedGlobalPropertySetToFalseIsReportedAsError() {
+        assertDeprecationReported(propertyValue = "false")
+    }
+
+    private fun assertDeprecationReported(propertyValue: String) {
+        val project = buildProjectWithJvm(preApplyCode = {
+            extraProperties.set("kotlin.internal.incremental.enableUnsafeOptimizationsForMultiplatform", propertyValue)
+        }).evaluate()
+
+        project.assertContainsDiagnostic(KotlinToolingDiagnostics.DeprecatedErrorGradleProperties)
     }
 
     private fun assertEnabledTargets(

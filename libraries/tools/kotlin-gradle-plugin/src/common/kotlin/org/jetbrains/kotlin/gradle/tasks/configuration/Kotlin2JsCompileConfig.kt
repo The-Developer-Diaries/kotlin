@@ -67,7 +67,7 @@ internal open class BaseKotlin2JsCompileConfig<TASK : Kotlin2JsCompile>(
                     when (compilation.platformType) {
                         KotlinPlatformType.js -> propertiesProvider.enableJsUnsafeOptimizationsForMultiplatform
                         KotlinPlatformType.wasm -> propertiesProvider.enableWasmUnsafeOptimizationsForMultiplatform
-                        else -> false
+                        else -> project.providers.provider { false }
                     }
                 )
                 .finalizeValueOnRead()

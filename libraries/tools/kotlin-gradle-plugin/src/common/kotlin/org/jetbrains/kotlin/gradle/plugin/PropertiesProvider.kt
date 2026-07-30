@@ -618,16 +618,16 @@ internal class PropertiesProvider private constructor(private val project: Proje
      * Without unsafe optimization: in k2, if common source is dirty, module will be rebuilt.
      * With unsafe optimization: regular IC logic is used. Common sources might see declarations from platform sources. See KT-62686
      */
-    val enableJvmUnsafeOptimizationsForMultiplatform: Boolean
-        get() = booleanProperty(PropertyNames.KOTLIN_JVM_UNSAFE_MULTIPLATFORM_INCREMENTAL_COMPILATION) ?: false
+    val enableJvmUnsafeOptimizationsForMultiplatform: Provider<Boolean>
+        get() = booleanProvider(PropertyNames.KOTLIN_JVM_UNSAFE_MULTIPLATFORM_INCREMENTAL_COMPILATION).orElse(false)
 
     /** See [enableJvmUnsafeOptimizationsForMultiplatform] */
-    val enableJsUnsafeOptimizationsForMultiplatform: Boolean
-        get() = booleanProperty(PropertyNames.KOTLIN_JS_UNSAFE_MULTIPLATFORM_INCREMENTAL_COMPILATION) ?: false
+    val enableJsUnsafeOptimizationsForMultiplatform: Provider<Boolean>
+        get() = booleanProvider(PropertyNames.KOTLIN_JS_UNSAFE_MULTIPLATFORM_INCREMENTAL_COMPILATION).orElse(false)
 
     /** See [enableJvmUnsafeOptimizationsForMultiplatform] */
-    val enableWasmUnsafeOptimizationsForMultiplatform: Boolean
-        get() = booleanProperty(PropertyNames.KOTLIN_WASM_UNSAFE_MULTIPLATFORM_INCREMENTAL_COMPILATION) ?: false
+    val enableWasmUnsafeOptimizationsForMultiplatform: Provider<Boolean>
+        get() = booleanProvider(PropertyNames.KOTLIN_WASM_UNSAFE_MULTIPLATFORM_INCREMENTAL_COMPILATION).orElse(false)
 
     /**
      * Context: assume that incremental compilation of a.kt makes b.kt dirty (for example, because some function needs to be re-inlined)
@@ -874,6 +874,12 @@ internal class PropertiesProvider private constructor(private val project: Proje
         val KOTLIN_CREATE_ARCHIVE_TASKS_FOR_CUSTOM_COMPILATIONS =
             property("$KOTLIN_INTERNAL_NAMESPACE.mpp.createArchiveTasksForCustomCompilations")
         val KOTLIN_COMPILER_ARGUMENTS_LOG_LEVEL = property("$KOTLIN_INTERNAL_NAMESPACE.compiler.arguments.log.level")
+        /**
+         * Replaced by the per-target properties below, kept only to report
+         * [org.jetbrains.kotlin.gradle.plugin.diagnostics.KotlinToolingDiagnostics.DeprecatedErrorGradleProperties] on its usage.
+         */
+        val KOTLIN_UNSAFE_MULTIPLATFORM_INCREMENTAL_COMPILATION =
+            property("$KOTLIN_INTERNAL_NAMESPACE.incremental.enableUnsafeOptimizationsForMultiplatform")
         val KOTLIN_JVM_UNSAFE_MULTIPLATFORM_INCREMENTAL_COMPILATION =
             property("$KOTLIN_INTERNAL_NAMESPACE.jvm.enableUnsafeOptimizationsForMultiplatform")
         val KOTLIN_JS_UNSAFE_MULTIPLATFORM_INCREMENTAL_COMPILATION =

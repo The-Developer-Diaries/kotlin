@@ -17,7 +17,10 @@ import kotlin.io.path.writeText
 
 /**
  * `enableUnsafeOptimizationsForMultiplatform` is configured per target (KT-87522), so enabling it for one target
- * must not change the incremental compilation behavior of the others. See KT-62686 for the underlying issue.
+ * must not change the incremental compilation behavior of the others.
+ *
+ * These tests check incremental compilation behavior, not KGP configuration, but the Build Tools API tests do not
+ * support KMP compilation scenarios yet. Move them there once they do.
  */
 @MppGradlePluginTests
 @DisplayName("Per-target unsafe optimizations for KMP incremental compilation")
