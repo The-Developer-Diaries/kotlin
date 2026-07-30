@@ -145,13 +145,7 @@ internal object KotlinCompilationK2MultiplatformConfigurator : KotlinCompilation
                         val metadataCompilation = internalSourceSet.compilations.filterIsInstance<KotlinSharedNativeCompilation>()
                             .find { it.defaultSourceSet.name == sourceSet.name }
                         if (metadataCompilation != null) {
-                            val nativePlatforms = internalSourceSet.awaitPlatformCompilations()
-                                .filterIsInstance<AbstractKotlinNativeCompilation>()
-                                .map { compilation -> compilation.konanTarget.name }.toSet()
-                            if (mostCommonFragmentPerNativePlatforms[nativePlatforms] == fragmentName) {
-                                add(metadataCompilation.retrievePlatformDependenciesWithNativeDistribution())
-                            }
-
+                            add(metadataCompilation.retrievePlatformDependenciesWithNativeDistribution())
                             commonizeCInteropTask()?.let { task ->
                                 val cinteropCommonizerDependent = CInteropCommonizerDependent.from(metadataCompilation) ?: return@let
                                 add(task.map { it.commonizedOutputLibraries(cinteropCommonizerDependent) })
