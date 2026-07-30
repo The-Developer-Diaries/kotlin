@@ -14,27 +14,25 @@ import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.descriptors.*
 import org.jetbrains.kotlin.descriptors.impl.ModuleDescriptorImpl
 import org.jetbrains.kotlin.ir.IrBuiltIns
+import org.jetbrains.kotlin.ir.IrElement
 import org.jetbrains.kotlin.ir.ObsoleteDescriptorBasedAPI
 import org.jetbrains.kotlin.ir.declarations.*
-import org.jetbrains.kotlin.ir.declarations.impl.IrModuleFragmentImpl
+import org.jetbrains.kotlin.ir.overrides.IrExternalOverridabilityCondition
 import org.jetbrains.kotlin.ir.symbols.IrFieldSymbol
 import org.jetbrains.kotlin.ir.symbols.IrSymbol
+import org.jetbrains.kotlin.ir.types.IrTypeSystemContext
 import org.jetbrains.kotlin.ir.util.DeclarationStubGenerator
 import org.jetbrains.kotlin.ir.util.IdSignature
 import org.jetbrains.kotlin.ir.util.KotlinMangler
 import org.jetbrains.kotlin.ir.util.SymbolTable
+import org.jetbrains.kotlin.ir.visitors.IrVisitorVoid
+import org.jetbrains.kotlin.ir.visitors.acceptChildrenVoid
+import org.jetbrains.kotlin.ir.visitors.acceptVoid
 import org.jetbrains.kotlin.library.KotlinAbiVersion
 import org.jetbrains.kotlin.library.KotlinLibrary
 import org.jetbrains.kotlin.load.java.descriptors.JavaCallableMemberDescriptor
 import org.jetbrains.kotlin.load.java.descriptors.JavaClassDescriptor
 import org.jetbrains.kotlin.load.java.lazy.descriptors.LazyJavaPackageFragment
-import org.jetbrains.kotlin.ir.declarations.IrProperty
-import org.jetbrains.kotlin.ir.overrides.IrExternalOverridabilityCondition
-import org.jetbrains.kotlin.ir.types.IrTypeSystemContext
-import org.jetbrains.kotlin.ir.IrElement
-import org.jetbrains.kotlin.ir.visitors.IrVisitorVoid
-import org.jetbrains.kotlin.ir.visitors.acceptChildrenVoid
-import org.jetbrains.kotlin.ir.visitors.acceptVoid
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
 
@@ -93,17 +91,17 @@ class JKlibIrLinker(
         moduleDescriptor === moduleDescriptor.builtIns.builtInsModule
 
     override fun createModuleDeserializer(
-        moduleDescriptor: ModuleDescriptor,
+        moduleFragment: IrModuleFragment,
         klib: KotlinLibrary?,
         strategyResolver: (String) -> DeserializationStrategy,
     ): IrModuleDeserializer {
         if (klib == null) {
-            return MetadataJVMModuleDeserializer(moduleDescriptor)
+            return MetadataJVMModuleDeserializer(moduleFragment)
         }
 
         val libraryAbiVersion = klib.versions.abiVersion ?: KotlinAbiVersion.CURRENT
         return JKlibModuleDeserializer(
-            moduleDescriptor,
+            moduleFragment,
             klib,
             strategyResolver,
             libraryAbiVersion,
@@ -123,8 +121,8 @@ class JKlibIrLinker(
     }
 
     private inner class MetadataJVMModuleDeserializer(
-        moduleDescriptor: ModuleDescriptor,
-    ) : IrModuleDeserializer(KotlinAbiVersion.CURRENT) {
+        moduleFragment: IrModuleFragment,
+    ) : IrModuleDeserializer(moduleFragment, KotlinAbiVersion.CURRENT) {
         override val klib: KotlinLibrary get() = error("'klib' is not available for ${this::class.java}")
 
         override fun contains(idSig: IdSignature): Boolean = resolveDescriptor(idSig) != null
@@ -132,7 +130,7 @@ class JKlibIrLinker(
         override fun getDefinedPackageNames(): Set<FqName>? = null
 
         private val descriptorFinder = DescriptorByIdSignatureFinderImpl(
-            moduleDescriptor,
+            moduleFragment.descriptor,
             descriptorMangler,
             DescriptorByIdSignatureFinderImpl.LookupMode.MODULE_ONLY,
         )
@@ -170,24 +168,22 @@ class JKlibIrLinker(
                 stubGenerator.generateMemberStub(symbol.descriptor)
             }
         }
-
-        override val moduleFragment: IrModuleFragment = IrModuleFragmentImpl(moduleDescriptor)
     }
     private inner class JKlibModuleDeserializer(
-        moduleDescriptor: ModuleDescriptor,
+        moduleFragment: IrModuleFragment,
         klib: KotlinLibrary,
         strategyResolver: (String) -> DeserializationStrategy,
         libraryAbiVersion: KotlinAbiVersion,
     ) : BasicIrModuleDeserializer(
         this,
-        moduleDescriptor,
+        moduleFragment,
         klib,
         strategyResolver,
         libraryAbiVersion,
     ) {
 
         private val descriptorByIdSignatureFinder = DescriptorByIdSignatureFinderImpl(
-            moduleDescriptor,
+            moduleFragment.descriptor,
             descriptorMangler,
             DescriptorByIdSignatureFinderImpl.LookupMode.MODULE_ONLY,
         )

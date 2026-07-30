@@ -5,12 +5,15 @@
 
 package org.jetbrains.kotlin.backend.konan.serialization
 
-import org.jetbrains.kotlin.backend.common.serialization.*
+import org.jetbrains.kotlin.backend.common.serialization.BasicIrModuleDeserializer
+import org.jetbrains.kotlin.backend.common.serialization.DeserializationStrategy
+import org.jetbrains.kotlin.backend.common.serialization.FileDeserializationState
+import org.jetbrains.kotlin.backend.common.serialization.KotlinIrLinker
 import org.jetbrains.kotlin.descriptors.DeclarationDescriptor
-import org.jetbrains.kotlin.descriptors.ModuleDescriptor
 import org.jetbrains.kotlin.ir.ObsoleteDescriptorBasedAPI
 import org.jetbrains.kotlin.ir.declarations.IrDeclaration
 import org.jetbrains.kotlin.ir.declarations.IrFile
+import org.jetbrains.kotlin.ir.declarations.IrModuleFragment
 import org.jetbrains.kotlin.ir.declarations.path
 import org.jetbrains.kotlin.ir.util.IdSignature
 import org.jetbrains.kotlin.ir.util.render
@@ -20,13 +23,13 @@ import org.jetbrains.kotlin.library.KotlinLibrary
 @OptIn(ObsoleteDescriptorBasedAPI::class)
 class KonanPartialModuleDeserializer(
     kotlinIrLinker: KotlinIrLinker,
-    moduleDescriptor: ModuleDescriptor,
+    moduleFragment: IrModuleFragment,
     klib: KotlinLibrary,
     strategyResolver: (String) -> DeserializationStrategy,
     private val cacheDeserializationStrategy: CacheDeserializationStrategy,
 ) : BasicIrModuleDeserializer(
     linker = kotlinIrLinker,
-    moduleDescriptor = moduleDescriptor,
+    moduleFragment = moduleFragment,
     klib = klib,
     strategyResolver = { fileName -> if (cacheDeserializationStrategy.contains(fileName)) strategyResolver(fileName) else DeserializationStrategy.ON_DEMAND },
     libraryAbiVersion = klib.versions.abiVersion ?: KotlinAbiVersion.CURRENT,
