@@ -1,7 +1,7 @@
 // RUN_PIPELINE_TILL: FRONTEND
 // OPT_IN: kotlin.js.ExperimentalJsExport
 // RENDER_DIAGNOSTIC_ARGUMENTS
-// LANGUAGE: +JsAllowExportingAnnotationClasses
+// LANGUAGE: +JsAllowExportingAnnotationClasses -JsAllowNonClassNestedDeclarationsInsideInterfaces
 
 @JsExport
 interface NonClassNestedDeclarations {
