@@ -24,11 +24,12 @@ internal abstract class SwiftImportFingerprintInput {
     abstract val fingerprintFile: RegularFileProperty
 
     fun readFingerprint(): SwiftImportFingerprint =
-        fingerprintFile.get().asFile.readText().let {
-            fingerprintJson.decodeFromString<SwiftImportFingerprint>(it)
-        }
+        fingerprintFile.get().asFile.readSwiftImportFingerprint()
 
 }
+
+internal fun File.readSwiftImportFingerprint(): SwiftImportFingerprint =
+    fingerprintJson.decodeFromString<SwiftImportFingerprint>(readText())
 
 internal abstract class LocalPackageTrackingInputs {
 
