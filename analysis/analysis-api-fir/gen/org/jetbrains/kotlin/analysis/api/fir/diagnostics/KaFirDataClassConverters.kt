@@ -7576,6 +7576,7 @@ private fun KaDiagnosticConverterBuilder.addConversions170() {
     add(FirErrors.UNRESOLVED_REFERENCE_WRONG_RECEIVER) { firDiagnostic ->
         UnresolvedReferenceWrongReceiverImpl(
             firSymbolBuilder.buildSymbol(firDiagnostic.a),
+            firDiagnostic.b,
             firDiagnostic as KtPsiDiagnostic,
             token,
         )
