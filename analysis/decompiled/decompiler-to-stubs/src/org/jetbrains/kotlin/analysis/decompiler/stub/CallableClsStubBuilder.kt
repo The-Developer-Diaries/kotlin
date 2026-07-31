@@ -19,6 +19,7 @@ import org.jetbrains.kotlin.metadata.ProtoBuf.MemberKind
 import org.jetbrains.kotlin.metadata.ProtoBuf.Modality
 import org.jetbrains.kotlin.metadata.deserialization.*
 import org.jetbrains.kotlin.metadata.jvm.JvmProtoBuf
+import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.protobuf.MessageLite
 import org.jetbrains.kotlin.psi.*
 import org.jetbrains.kotlin.psi.stubs.elements.KtStubElementTypes
@@ -127,9 +128,10 @@ fun createConstructorStub(
     parentStub: StubElement<out PsiElement>,
     constructorProto: ProtoBuf.Constructor,
     outerContext: ClsStubBuilderContext,
-    protoContainer: ProtoContainer
+    protoContainer: ProtoContainer,
+    foldedProperties: Map<Name, ProtoBuf.Property>,
 ) {
-    ConstructorClsStubBuilder(parentStub, outerContext, protoContainer, constructorProto).build()
+    ConstructorClsStubBuilder(parentStub, outerContext, protoContainer, constructorProto, foldedProperties).build()
 }
 
 /**
@@ -599,7 +601,8 @@ private class ConstructorClsStubBuilder(
     parent: StubElement<out PsiElement>,
     outerContext: ClsStubBuilderContext,
     protoContainer: ProtoContainer,
-    private val constructorProto: ProtoBuf.Constructor
+    private val constructorProto: ProtoBuf.Constructor,
+    private val foldedProperties: Map<Name, ProtoBuf.Property>,
 ) : CallableClsStubBuilder(parent, outerContext, protoContainer, emptyList()) {
     override val receiverType: ProtoBuf.Type?
         get() = null
@@ -620,7 +623,13 @@ private class ConstructorClsStubBuilder(
         get() = constructorProto
 
     override fun createValueParameterList() {
-        typeStubBuilder.createValueParameterListStub(callableStub, constructorProto, constructorProto.valueParameterList, protoContainer)
+        typeStubBuilder.createValueParameterListStub(
+            callableStub,
+            constructorProto,
+            constructorProto.valueParameterList,
+            protoContainer,
+            foldedProperties = foldedProperties,
+        )
     }
 
     override fun createModifierListStub() {

@@ -68,7 +68,9 @@ class KotlinDeclarationInCompiledFileSearcher {
                 ?: classOrObject
         }
 
-        val regularDeclarations = container.declarations
+        // A compiled annotation class declares its properties as parameters of its primary constructor
+        val foldedProperties = (container as? KtClassOrObject)?.primaryConstructorParameters?.filter(KtParameter::hasValOrVar).orEmpty()
+        val regularDeclarations = container.declarations + foldedProperties
 
         @OptIn(KtExperimentalApi::class)
         val staticDeclarations: List<KtDeclaration> = if (container is KtClass && member.hasModifierProperty(PsiModifier.STATIC)) {
@@ -198,6 +200,12 @@ class KotlinDeclarationInCompiledFileSearcher {
                             propertyMatcher(declaration, false)
                 }
             }
+            // The accessor of an annotation property takes no arguments and its name is unique within the annotation,
+            // so there is nothing to match beyond the name itself
+            is KtParameter -> setter != true &&
+                    member.containingClass?.isAnnotationType == true &&
+                    matchesAny(declarationName, names, declaration)
+
             else -> false
         }
     }

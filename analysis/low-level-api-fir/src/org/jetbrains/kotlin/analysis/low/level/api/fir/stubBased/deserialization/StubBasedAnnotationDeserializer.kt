@@ -47,6 +47,30 @@ internal class StubBasedAnnotationDeserializer(private val session: FirSession) 
             it == AnnotationUseSiteTarget.RECEIVER
         }
 
+        /**
+         * A folded constructor parameter carries the annotations of the property it declares as well as its own,
+         * so each of these filters picks the declaration an annotation was written on.
+         */
+        val VALUE_PARAMETER_ANNOTATIONS_FILTER: (AnnotationUseSiteTarget?) -> Boolean = {
+            it == null || it == AnnotationUseSiteTarget.CONSTRUCTOR_PARAMETER
+        }
+
+        val PROPERTY_ANNOTATIONS_FILTER: (AnnotationUseSiteTarget?) -> Boolean = {
+            it == AnnotationUseSiteTarget.PROPERTY
+        }
+
+        val GETTER_ANNOTATIONS_FILTER: (AnnotationUseSiteTarget?) -> Boolean = {
+            it == AnnotationUseSiteTarget.PROPERTY_GETTER
+        }
+
+        val SETTER_ANNOTATIONS_FILTER: (AnnotationUseSiteTarget?) -> Boolean = {
+            it == AnnotationUseSiteTarget.PROPERTY_SETTER
+        }
+
+        val BACKING_FIELD_ANNOTATIONS_FILTER: (AnnotationUseSiteTarget?) -> Boolean = {
+            it == AnnotationUseSiteTarget.FIELD || it == AnnotationUseSiteTarget.PROPERTY_DELEGATE_FIELD
+        }
+
         val TYPE_ANNOTATIONS_FILTER: (AnnotationUseSiteTarget?) -> Boolean = {
             it == null
         }
@@ -69,6 +93,13 @@ internal class StubBasedAnnotationDeserializer(private val session: FirSession) 
         if (!property.hasModifier(KtTokens.CONST_KEYWORD) && !isFromAnnotation) return null
         val propertyStub: KotlinPropertyStubImpl = property.compiledStub
         val constantValue = propertyStub.constantInitializer ?: return null
+        return resolveConstant(property, constantValue, type)
+    }
+
+    /**
+     * Builds the expression [constantValue] stands for, as it is written at [sourceElement].
+     */
+    fun resolveConstant(sourceElement: PsiElement, constantValue: ConstantValue<*>, type: ConeKotlinType): FirExpression {
         val resultValue = when {
             !type.isUnsignedType -> constantValue
             type.isUByte -> UByteValue((constantValue.value as Number).toByte())
@@ -78,7 +109,7 @@ internal class StubBasedAnnotationDeserializer(private val session: FirSession) 
             else -> constantValue
         }
 
-        return resolveValue(property, resultValue)
+        return resolveValue(sourceElement, resultValue)
     }
 
     private fun deserializeAnnotation(
