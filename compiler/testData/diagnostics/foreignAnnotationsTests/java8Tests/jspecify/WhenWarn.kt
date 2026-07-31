@@ -121,7 +121,7 @@ fun test_12(): Int {
 }
 
 fun test_13(): Int {
-    return <!UNEXHAUSTIVE_WHEN_BASED_ON_JAVA_ANNOTATIONS!>when<!> (J.getNullable()) {
+    return when (J.getNullable()) {
         J.A -> 1
         J.B, null -> 2
     }
@@ -130,7 +130,7 @@ fun test_13(): Int {
 fun test_14(): Int {
     val e = J.getNullable()
     if (e == null) return 0
-    return <!UNEXHAUSTIVE_WHEN_BASED_ON_JAVA_ANNOTATIONS!>when<!> (e) {
+    return when (e) {
         J.A -> 1
         J.B -> 2
     }
