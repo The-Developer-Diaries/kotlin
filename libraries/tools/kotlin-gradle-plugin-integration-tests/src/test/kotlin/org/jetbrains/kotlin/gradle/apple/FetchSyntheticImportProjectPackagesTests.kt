@@ -15,15 +15,18 @@ import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
 import org.jetbrains.kotlin.gradle.dsl.createKotlinExtension
 import org.jetbrains.kotlin.gradle.plugin.mpp.apple.swiftimport.FetchSyntheticImportProjectPackages
+import org.jetbrains.kotlin.gradle.plugin.mpp.apple.swiftimport.FingerprintSyntheticPackage
 import org.jetbrains.kotlin.gradle.plugin.mpp.apple.swiftimport.GenerateSyntheticLinkageImportProject
 import org.jetbrains.kotlin.gradle.plugin.mpp.apple.swiftimport.GenerateSyntheticLinkageImportProject.Companion.SyntheticProductType
 import org.jetbrains.kotlin.gradle.plugin.mpp.apple.swiftimport.PackageResolvedSynchronization
 import org.jetbrains.kotlin.gradle.plugin.mpp.apple.swiftimport.SHARED_CHECKOUT_DIR
 import org.jetbrains.kotlin.gradle.plugin.mpp.apple.swiftimport.SHARED_SYNTHETIC_PACKAGE_DIR
+import org.jetbrains.kotlin.gradle.plugin.mpp.apple.swiftimport.SerializeSwiftPMDependenciesMetadataForLockFiles
 import org.jetbrains.kotlin.gradle.plugin.mpp.apple.swiftimport.SwiftPMDependency
 import org.jetbrains.kotlin.gradle.plugin.mpp.apple.swiftimport.SwiftPMDependencyIdentifier
 import org.jetbrains.kotlin.gradle.plugin.mpp.apple.swiftimport.SwiftPMImportMetadata
 import org.jetbrains.kotlin.gradle.plugin.mpp.apple.swiftimport.SwiftImportTestExecutionKind
+import org.jetbrains.kotlin.gradle.plugin.mpp.apple.swiftimport.SyncPackageResolvedTask
 import org.jetbrains.kotlin.gradle.plugin.mpp.apple.swiftimport.TransitiveSwiftPMMetadata
 import org.jetbrains.kotlin.gradle.plugin.mpp.apple.swiftimport.locateOrRegisterSwiftPMDependenciesExtension
 import org.jetbrains.kotlin.gradle.testbase.BuildOptions
@@ -33,6 +36,7 @@ import org.jetbrains.kotlin.gradle.testbase.KGPBaseTest
 import org.jetbrains.kotlin.gradle.testbase.OsCondition
 import org.jetbrains.kotlin.gradle.testbase.SwiftPMImportGradlePluginTests
 import org.jetbrains.kotlin.gradle.testbase.TestVersions
+import org.jetbrains.kotlin.gradle.testbase.assertExactTasksInGraph
 import org.jetbrains.kotlin.gradle.testbase.assertFileExists
 import org.jetbrains.kotlin.gradle.testbase.assertFileNotExists
 import org.jetbrains.kotlin.gradle.testbase.assertFilesContentEquals
@@ -259,7 +263,8 @@ class FetchSyntheticImportProjectPackagesTests : KGPBaseTest() {
                 build(
                     ":${FetchSyntheticImportProjectPackages.TASK_NAME}"
                 ) {
-                    val rootSyntheticPackageHash = projectPath.resolve(SYNTHETIC_PACKAGE_FINGERPRINT_BUILD_DIR_PATH).readText().trim().split("\n")[1]
+                    val rootSyntheticPackageHash =
+                        projectPath.resolve(SYNTHETIC_PACKAGE_FINGERPRINT_BUILD_DIR_PATH).readText().trim().split("\n")[1]
 
                     val syntheticPackage = projectPath.resolve(SHARED_SYNTHETIC_PACKAGE_DIR).resolve(rootSyntheticPackageHash)
                         .resolve("Package.resolved")
@@ -270,6 +275,84 @@ class FetchSyntheticImportProjectPackagesTests : KGPBaseTest() {
                         syntheticPackage, sharedCheckoutDir
                     )
                 }
+            }
+        }
+    }
+
+    @OptIn(ExperimentalKotlinGradlePluginApi::class)
+    @GradleTest
+    fun `KT-88154 - fetchSyntheticImportProjectPackages bumps versions in Package_resolved when version key changes from exact to from using Mapbox`(
+        version: GradleVersion,
+    ) {
+
+        project("empty", version) {
+            withLockFileFixture {
+
+                val identifier = "default"
+                val useFromVersionKey = "useFromVersionKey"
+                val useExactVersionKey = "useExactVersionKey"
+
+                val mapsRepo = repoRef("Maps").also { createRepo(it.name, listOf("1.0.0", "1.0.1", "1.0.2")) }
+
+                initSwiftPmProject(cacheDirFile) {
+                    if (project.hasProperty(useFromVersionKey)) {
+                        swiftPMDependencies {
+                            swiftPackage(
+                                url = url(mapsRepo.url),
+                                version = from("1.0.0"),
+                                products = listOf(product(mapsRepo.name)),
+                            )
+                        }
+                    }
+                    if (project.hasProperty(useExactVersionKey)) {
+                        swiftPMDependencies {
+                            swiftPackage(
+                                url = url(mapsRepo.url),
+                                version = exact("1.0.0"),
+                                products = listOf(product(mapsRepo.name)),
+                            )
+                        }
+                    }
+                }
+
+                val syntheticPackageFingerprintFile = projectPath.resolve(SYNTHETIC_PACKAGE_FINGERPRINT_BUILD_DIR_PATH)
+
+                build("fetchSyntheticImportProjectPackages", "-P${useExactVersionKey}=true") {
+
+                    val syntheticPackageFingerprint = syntheticPackageFingerprintFile.readText().trim().split("\n")[1]
+                    val packageResolved = projectPath.resolve(SHARED_SYNTHETIC_PACKAGE_DIR).resolve(syntheticPackageFingerprint).resolve("Package.resolved")
+                    val checkoutDir = projectPath.resolve(SHARED_CHECKOUT_DIR).resolve(syntheticPackageFingerprint).resolve("checkouts")
+
+                    assertResolvedVersions(
+                        packageResolved,
+                        checkoutRepoDir = checkoutDir,
+                        listOf(
+                            mapsRepo to "1.0.0",
+                        )
+                    )
+                }
+
+                build("fetchSyntheticImportProjectPackages", "-P${useFromVersionKey}=true") {
+                    val syntheticPackageFingerprint = syntheticPackageFingerprintFile.readText().trim().split("\n")[1]
+                    val packageResolved = projectPath.resolve(SHARED_SYNTHETIC_PACKAGE_DIR).resolve(syntheticPackageFingerprint).resolve("Package.resolved")
+                    val checkoutDir = projectPath.resolve(SHARED_CHECKOUT_DIR).resolve(syntheticPackageFingerprint).resolve("checkouts")
+
+
+                    // TODO check the package generation.
+                    assertTasksExecuted(
+                        ":syncPersistedPackageResolvedToSynthetic",
+                        ":${FetchSyntheticImportProjectPackages.fetchUmbrellaPackageTaskName(identifier)}"
+                    )
+
+                    assertResolvedVersions(
+                        packageResolved,
+                        checkoutRepoDir = checkoutDir,
+                        listOf(
+                            mapsRepo to "1.0.2",
+                        )
+                    )
+                }
+
             }
         }
     }
