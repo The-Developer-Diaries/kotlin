@@ -32,6 +32,7 @@ import org.jetbrains.kotlin.fir.symbols.FirBasedSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.*
 import org.jetbrains.kotlin.fir.types.ConeKotlinType
 import org.jetbrains.kotlin.fir.types.FirTypeRef
+import org.jetbrains.kotlin.fir.types.ConeReceiverInfo
 import org.jetbrains.kotlin.lexer.KtKeywordToken
 import org.jetbrains.kotlin.lexer.KtModifierKeywordToken
 import org.jetbrains.kotlin.metadata.deserialization.VersionRequirement
@@ -408,6 +409,7 @@ internal object FirToKtConversionCreator {
         KotlinTarget::class,
         ReturnValueStatus::class,
         MavenComparableVersion::class,
+        ConeReceiverInfo::class,
     )
 
     private val KType.kClass: KClass<*>
