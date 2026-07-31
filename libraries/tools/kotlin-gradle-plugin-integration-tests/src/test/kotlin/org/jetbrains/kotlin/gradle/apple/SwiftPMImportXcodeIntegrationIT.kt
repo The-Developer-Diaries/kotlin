@@ -730,10 +730,9 @@ class SwiftPMImportXcodeIntegrationIT : KGPBaseTest() {
                     message = "Subpackage directory for subprojectA should exist"
                 )
 
-                // https://youtrack.jetbrains.com/issue/KT-82823
-                assertTrue(
+                assertFalse(
                     projectPath.resolve("iosApp/$SYNTHETIC_IMPORT_TARGET_MAGIC_NAME/subpackages/_subprojectB").exists(),
-                    message = "Subpackage directory for subprojectB exists, should be fixed in KT-82823"
+                    message = "Subpackage directory for subprojectB should be removed"
                 )
             }
         }

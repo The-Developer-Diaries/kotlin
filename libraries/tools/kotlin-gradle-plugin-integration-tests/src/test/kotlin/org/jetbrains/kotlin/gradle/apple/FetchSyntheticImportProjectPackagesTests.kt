@@ -55,6 +55,7 @@ import org.jetbrains.kotlin.incremental.testingUtils.assertEqualDirectories
 import org.jetbrains.kotlin.konan.target.KonanTarget
 import org.junit.jupiter.api.condition.OS
 import kotlin.io.path.deleteRecursively
+import kotlin.io.path.listDirectoryEntries
 import kotlin.io.path.readText
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
@@ -281,7 +282,7 @@ class FetchSyntheticImportProjectPackagesTests : KGPBaseTest() {
 
     @OptIn(ExperimentalKotlinGradlePluginApi::class)
     @GradleTest
-    fun `KT-88154 - fetchSyntheticImportProjectPackages bumps versions in Package_resolved when version key changes from exact to from using Mapbox`(
+    fun `KT-88154 - fetchSyntheticImportProjectPackages does not bump versions in Package_resolved when version key changes from exact to from using Mapbox`(
         version: GradleVersion,
     ) {
 
@@ -337,8 +338,6 @@ class FetchSyntheticImportProjectPackagesTests : KGPBaseTest() {
                     val packageResolved = projectPath.resolve(SHARED_SYNTHETIC_PACKAGE_DIR).resolve(syntheticPackageFingerprint).resolve("Package.resolved")
                     val checkoutDir = projectPath.resolve(SHARED_CHECKOUT_DIR).resolve(syntheticPackageFingerprint).resolve("checkouts")
 
-
-                    // TODO check the package generation.
                     assertTasksExecuted(
                         ":syncPersistedPackageResolvedToSynthetic",
                         ":${FetchSyntheticImportProjectPackages.fetchUmbrellaPackageTaskName(identifier)}"
@@ -348,11 +347,10 @@ class FetchSyntheticImportProjectPackagesTests : KGPBaseTest() {
                         packageResolved,
                         checkoutRepoDir = checkoutDir,
                         listOf(
-                            mapsRepo to "1.0.2",
+                            mapsRepo to "1.0.0",
                         )
                     )
                 }
-
             }
         }
     }
