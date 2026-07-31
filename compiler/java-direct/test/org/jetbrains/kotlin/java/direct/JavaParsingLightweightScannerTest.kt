@@ -10,7 +10,11 @@ import org.jetbrains.kotlin.load.java.JavaClassFinder
 import org.jetbrains.kotlin.name.ClassId
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertNotNull
 import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Path
 import kotlin.io.path.writeText
@@ -233,11 +237,9 @@ class JavaParsingLightweightScannerTest : JavaParsingTestBase() {
         )
 
         val info = extractFileInfoLightweight(file.toFile())
-        assert(info != null) { "Expected non-null LightweightFileInfo" }
-        assert(info!!.packageName == "com.example") { "Expected package 'com.example', got '${info.packageName}'" }
-        assert(info.topLevelClassNames == setOf("Broken", "Foo")) {
-            "Expected {Broken, Foo}, got ${info.topLevelClassNames}"
-        }
+        assertNotNull(info)
+        assertEquals("com.example", info.packageName)
+        assertEquals(setOf("Broken", "Foo"), info.topLevelClassNames)
     }
 
     @Test
@@ -256,10 +258,8 @@ class JavaParsingLightweightScannerTest : JavaParsingTestBase() {
         )
 
         val info = extractFileInfoLightweight(file.toFile())
-        assert(info != null) { "Expected non-null LightweightFileInfo" }
-        assert(info!!.topLevelClassNames == setOf("Foo", "Bar")) {
-            "Expected {Foo, Bar}, got ${info.topLevelClassNames}"
-        }
+        assertNotNull(info)
+        assertEquals(setOf("Foo", "Bar"), info.topLevelClassNames)
     }
 
     @Test
