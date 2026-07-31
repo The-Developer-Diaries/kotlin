@@ -271,7 +271,7 @@ class GenerateSyntheticLinkageImportProjectTests : KGPBaseTest() {
     }
 
     @GradleTest
-    fun `package regeneration does not remove stale transitive subpackages`(version: GradleVersion) {
+    fun `package regeneration removes stale transitive subpackages`(version: GradleVersion) {
         val useNewDependency = "useNewDependency"
 
         project("empty", version) {
@@ -310,7 +310,7 @@ class GenerateSyntheticLinkageImportProjectTests : KGPBaseTest() {
             build("packageGeneration", "-P$useNewDependency=true")
 
             assertEquals(
-                setOf("newDependency", "oldDependency"),
+                setOf("newDependency"),
                 projectPath.resolve("build/kotlin/swiftImport/${GenerateSyntheticLinkageImportProject.SUBPACKAGES}")
                     .toFile()
                     .list()
