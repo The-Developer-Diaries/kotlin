@@ -35,7 +35,7 @@ public fun SwiftError_create(box: kotlin.native.internal.NativePtr): kotlin.nati
 
 @ExportedBridge("SwiftError_retainedThrowableRef")
 public fun SwiftError_retainedThrowableRef(ref: kotlin.native.internal.NativePtr): kotlin.native.internal.NativePtr {
-    val throwable = kotlin.native.internal.ref.dereferenceExternalRCRef(ref)
+    val throwable = kotlin.native.internal.ref.dereferenceExternalRCRef(ref) as? kotlin.Throwable ?: return kotlin.native.internal.NativePtr.NULL
     return kotlin.native.internal.ref.createRetainedExternalRCRef(throwable)
 }
 

@@ -113,6 +113,11 @@ fun readBase(l: Labeled): String = l.base
 
 class MyKotlinException(message: String) : RuntimeException(message)
 
+// A plain Kotlin class that is NOT a `Throwable`: Swift may retroactively conform its exported class to
+// `Swift.Error` and throw it from an override. Kotlin cannot rethrow a non-throwable, so it has to travel as a
+// boxed `SwiftError` — and come back out to Swift as the very same instance.
+class NotAThrowable(val tag: String)
+
 // Open `@Throws` method with a non-Unit return and a parameter: a Swift override may throw a Swift
 // error, which must surface to a Kotlin caller as a thrown exception (reverse error bridge).
 open class Thrower {

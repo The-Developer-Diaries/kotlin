@@ -582,7 +582,7 @@ private class BridgeFunctionDescriptor(
         val swiftReturnTypeName = typeNamer.swiftFqName(returnType.swiftType)
 
         val returnBridge = returnType
-        require(returnBridge is BidirectionalBridge) { "Parameter bridge must be bidirectional" }
+        require(returnBridge is BidirectionalBridge) { "Return type bridge must be bidirectional" }
         val resultLine = returnBridge.inSwiftSources.swiftToKotlin(typeNamer, "_result")
 
         val selfDeclaration = selfBridge?.let {
@@ -657,7 +657,7 @@ private class BridgeFunctionDescriptor(
         }
 
         val returnBridge = returnType
-        require(returnBridge is BidirectionalBridge) { "Parameter bridge must be bidirectional" }
+        require(returnBridge is BidirectionalBridge) { "Return type bridge must be bidirectional" }
         val resultConversion = returnBridge.inKotlinSources.swiftToKotlin(typeNamer, "_result")
 
         val functionBody = if (errorParameter != null) {

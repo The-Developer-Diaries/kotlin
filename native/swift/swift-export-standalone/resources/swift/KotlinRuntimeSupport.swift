@@ -16,12 +16,13 @@ public struct KotlinError: Error & CustomStringConvertible {
 }
 
 package func kotlinThrowableRCRef(for error: any Error) -> UnsafeMutableRawPointer {
-    if let kotlinBase = error as? KotlinRuntime.KotlinBase {
-        return SwiftError_retainedThrowableRef(kotlinBase.__externalRCRef())
+    if let kotlinBase = error as? KotlinRuntime.KotlinBase, let throwableRef = SwiftError_retainedThrowableRef(kotlinBase.__externalRCRef()) {
+        return throwableRef
     }
 
-    if let kotlinError = error as? KotlinError {
-        return SwiftError_retainedThrowableRef(kotlinError.wrapped.__externalRCRef())
+    if let kotlinError = error as? KotlinError,
+       let throwableRef = SwiftError_retainedThrowableRef(kotlinError.wrapped.__externalRCRef()) {
+        return throwableRef
     }
     let errorObject = error as AnyObject
     return SwiftError_create(Unmanaged.passUnretained(errorObject).toOpaque())
