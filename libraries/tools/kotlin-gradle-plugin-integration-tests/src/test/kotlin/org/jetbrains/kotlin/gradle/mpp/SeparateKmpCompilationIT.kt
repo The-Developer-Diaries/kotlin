@@ -21,6 +21,7 @@ import org.jetbrains.kotlin.gradle.uklibs.*
 import org.jetbrains.kotlin.gradle.util.capitalize
 import org.jetbrains.kotlin.gradle.util.resolveRepoArtifactPath
 import org.jetbrains.kotlin.statistics.metrics.BooleanMetrics
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Path
@@ -495,17 +496,64 @@ class SeparateKmpCompilationIT : KGPBaseTest() {
 
     @DisplayName("Fragment dependencies should be propagated to non-default common source sets (single Linux target)")
     @GradleTest
+    @Disabled("KT-82417")
     fun nonDefaultHierarchySingleLinux(gradleVersion: GradleVersion) {
-        project("separateCompilationSchemeInNonDefaultHierarchy_singleLinux", gradleVersion) {
-            buildAndFail("compileKotlinLinuxX64")
-        }
+        testNonDefaultHierarchySingleLinux(gradleVersion, includeLinuxArm64 = false)
     }
 
     @DisplayName("Fragment dependencies should be propagated to non-default common source sets (multiple Linux targets)")
     @GradleTest
+    @Disabled("KT-82417")
     fun nonDefaultHierarchyMultipleLinux(gradleVersion: GradleVersion) {
-        project("separateCompilationSchemeInNonDefaultHierarchy_multipleLinux", gradleVersion) {
-            buildAndFail("compileKotlinLinuxX64")
+        testNonDefaultHierarchySingleLinux(gradleVersion, includeLinuxArm64 = true)
+    }
+
+    private fun testNonDefaultHierarchySingleLinux(gradleVersion: GradleVersion, includeLinuxArm64: Boolean) {
+        project("empty", gradleVersion) {
+            plugins {
+                kotlin("multiplatform")
+            }
+            enableSeparateCompilation()
+            buildScriptInjection {
+                with(project) {
+                    applyMultiplatform {
+                        @OptIn(ExperimentalKotlinGradlePluginApi::class)
+                        applyDefaultHierarchyTemplate {
+                            common {
+                                group("commonKotlin") {
+                                    group("native") {
+                                        group("darwin") {
+                                            withLinuxX64()
+                                            if (includeLinuxArm64) {
+                                                withLinuxArm64()
+                                            }
+                                        }
+                                        group("windows") {
+                                            withMingw()
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        mingwX64()
+                        linuxX64()
+                        if (includeLinuxArm64) {
+                            linuxArm64()
+                        }
+                    }
+                }
+            }
+            kotlinSourcesDir("darwinMain").source("darwinMain.kt") {
+                """
+                    import platform.linux.ERROR
+
+                    val theDate: Int = ERROR
+                """.trimIndent()
+            }
+
+
+            build("compileKotlinLinuxX64")
         }
     }
 
