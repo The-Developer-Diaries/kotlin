@@ -271,6 +271,56 @@ class GenerateSyntheticLinkageImportProjectTests : KGPBaseTest() {
     }
 
     @GradleTest
+    fun `package regeneration does not remove stale transitive subpackages`(version: GradleVersion) {
+        val useNewDependency = "useNewDependency"
+
+        project("empty", version) {
+            plugins {
+                kotlin("multiplatform").apply(false)
+            }
+            buildScriptInjection {
+                project.createKotlinExtension(KotlinMultiplatformExtension::class)
+                val extension = project.locateOrRegisterSwiftPMDependenciesExtension()
+                project.tasks.register<GenerateSyntheticLinkageImportProject>("packageGeneration") {
+                    configureWithExtension(extension)
+                    konanTargets.set(setOf(KonanTarget.IOS_ARM64))
+                    transitiveSwiftPMMetadata.set(
+                        TransitiveSwiftPMMetadata(
+                            mapOf(
+                                SwiftPMDependencyIdentifier(
+                                    if (project.hasProperty(useNewDependency)) "newDependency" else "oldDependency",
+                                    isModular = true,
+                                ) to SwiftPMImportMetadata(
+                                    konanTargets = setOf("ios_arm64"),
+                                    iosDeploymentVersion = null,
+                                    macosDeploymentVersion = null,
+                                    watchosDeploymentVersion = null,
+                                    tvosDeploymentVersion = null,
+                                    isModulesDiscoveryEnabled = true,
+                                    dependencies = emptySet(),
+                                )
+                            )
+                        )
+                    )
+                    syntheticProductType.set(SyntheticProductType.INFERRED)
+                }
+            }
+
+            build("packageGeneration")
+            build("packageGeneration", "-P$useNewDependency=true")
+
+            assertEquals(
+                setOf("newDependency", "oldDependency"),
+                projectPath.resolve("build/kotlin/swiftImport/${GenerateSyntheticLinkageImportProject.SUBPACKAGES}")
+                    .toFile()
+                    .list()
+                    .orEmpty()
+                    .toSet(),
+            )
+        }
+    }
+
+    @GradleTest
     fun `generate task generates same package given the same synthetic package fingerprint`(version: GradleVersion) {
         val subProjectName = "subProject"
 
