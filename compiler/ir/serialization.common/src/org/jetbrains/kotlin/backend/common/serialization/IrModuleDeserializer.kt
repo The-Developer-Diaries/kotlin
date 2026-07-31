@@ -145,12 +145,6 @@ class IrModuleDeserializerWithBuiltIns(
     onDeserializedClass: (IrClass, IdSignature) -> Unit,
     private val delegate: IrModuleDeserializer
 ) : IrModuleDeserializer(moduleFragment, delegate.libraryAbiVersion) {
-
-    init {
-        // TODO: figure out how it should work for K/N
-//        assert(builtIns.builtIns.builtInsModule === delegate.moduleDescriptor)
-    }
-
     private val signatureComputer = PublicIdSignatureComputer(mangler)
     private val syntheticProvider = IrSyntheticProvider(
         module = moduleFragment,
