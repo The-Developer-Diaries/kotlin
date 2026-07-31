@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+package org.jetbrains.kotlin.importmodels.proto;
+option java_multiple_files = true;
+
+enum Capability {
+  CAPABILITY_UNSPECIFIED = 0;
+  KOTLIN_JVM = 1;
+}
+
+enum Platform {
+  PLATFORM_UNSPECIFIED = 0;
+  JVM = 1;
+}
+
+message CompilationUnitId {
+  string value = 1;
+}
+
+message BaseModel {
+  string model_id = 1;
+  string kotlin_gradle_plugin_version = 2;
+  repeated Capability capabilities = 3;
+}
+
+message ProjectModel {
+  string model_id = 1;
+  string project_path = 2;
+  repeated CompilationUnitId compilation_unit_ids = 3;
+}
+
+message CompilationUnitModel {
+  string model_id = 1;
+  CompilationUnitId compilation_unit_id = 2;
+  string compilation_name = 3;
+  Platform platform = 4;
+  bool is_test = 5;
+  string compile_task_path = 6;
+}

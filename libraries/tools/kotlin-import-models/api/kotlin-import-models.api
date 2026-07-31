@@ -1,0 +1,17 @@
+public final class org/jetbrains/kotlin/importmodels/KotlinImportModelIds {
+	public static final field BASE Ljava/lang/String;
+	public static final field COMPILATION_UNIT Ljava/lang/String;
+	public static final field INSTANCE Lorg/jetbrains/kotlin/importmodels/KotlinImportModelIds;
+	public static final field PROJECT_INFORMATION Ljava/lang/String;
+}
+
+public final class org/jetbrains/kotlin/importmodels/KotlinImportModelProtoJson {
+	public static final field INSTANCE Lorg/jetbrains/kotlin/importmodels/KotlinImportModelProtoJson;
+	public static final fun parseBaseModel (Ljava/lang/String;)Lorg/jetbrains/kotlin/importmodels/proto/BaseModel;
+	public static final fun parseCompilationUnitModel (Ljava/lang/String;)Lorg/jetbrains/kotlin/importmodels/proto/CompilationUnitModel;
+	public static final fun parseProjectModel (Ljava/lang/String;)Lorg/jetbrains/kotlin/importmodels/proto/ProjectModel;
+	public static final fun render (Lorg/jetbrains/kotlin/importmodels/proto/BaseModel;)Ljava/lang/String;
+	public static final fun render (Lorg/jetbrains/kotlin/importmodels/proto/CompilationUnitModel;)Ljava/lang/String;
+	public static final fun render (Lorg/jetbrains/kotlin/importmodels/proto/ProjectModel;)Ljava/lang/String;
+}
+
