@@ -235,6 +235,10 @@ internal object FirToKtConversionCreator {
             "{0}?.let { firSymbolBuilder.typeBuilder.buildKtType(it) }",
             KaType::class.createType(nullable = true)
         ),
+        ConeReceiverInfo::class to HLFunctionCallConversion(
+            "{0}",
+            Any::class.createType(nullable = true),
+        )
     )
 
     private val typeMapping: Map<KClass<*>, HLFunctionCallConversion> = mapOf(
@@ -375,6 +379,10 @@ internal object FirToKtConversionCreator {
             importsToAdd = listOf(
                 "org.jetbrains.kotlin.analysis.api.fir.components.toKaWhenMissingCase"
             )
+        ),
+        ConeReceiverInfo::class to HLFunctionCallConversion(
+            "{0}",
+            Any::class.createType(),
         )
     )
 
@@ -409,7 +417,6 @@ internal object FirToKtConversionCreator {
         KotlinTarget::class,
         ReturnValueStatus::class,
         MavenComparableVersion::class,
-        ConeReceiverInfo::class,
     )
 
     private val KType.kClass: KClass<*>
