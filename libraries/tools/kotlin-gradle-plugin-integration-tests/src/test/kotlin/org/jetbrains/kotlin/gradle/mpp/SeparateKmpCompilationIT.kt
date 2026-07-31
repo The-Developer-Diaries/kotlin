@@ -496,7 +496,6 @@ class SeparateKmpCompilationIT : KGPBaseTest() {
 
     @DisplayName("Fragment dependencies should be propagated to non-default common source sets (single Linux target)")
     @GradleTest
-    @Disabled("KT-82417")
     fun nonDefaultHierarchySingleLinux(gradleVersion: GradleVersion) {
         testNonDefaultHierarchySingleLinux(gradleVersion, includeLinuxArm64 = false)
     }

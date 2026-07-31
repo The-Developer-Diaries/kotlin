@@ -36,6 +36,7 @@ import org.jetbrains.kotlin.gradle.utils.filesProvider
 import org.jetbrains.kotlin.gradle.utils.future
 import org.jetbrains.kotlin.gradle.utils.konanDistribution
 import org.jetbrains.kotlin.gradle.utils.lazyFuture
+import org.jetbrains.kotlin.utils.addToStdlib.firstIsInstanceOrNull
 import org.jetbrains.kotlin.utils.topologicalSort
 
 internal object KotlinCompilationK2MultiplatformConfigurator : KotlinCompilationImplFactory.PreConfigure {
@@ -144,8 +145,12 @@ internal object KotlinCompilationK2MultiplatformConfigurator : KotlinCompilation
                         }
                         val metadataCompilation = internalSourceSet.compilations.filterIsInstance<KotlinSharedNativeCompilation>()
                             .find { it.defaultSourceSet.name == sourceSet.name }
+
+                        (metadataCompilation ?: internalSourceSet.compilations.firstIsInstanceOrNull<AbstractKotlinNativeCompilation>())?.let {
+                            add(it.retrievePlatformDependenciesWithNativeDistribution())
+                        }
+
                         if (metadataCompilation != null) {
-                            add(metadataCompilation.retrievePlatformDependenciesWithNativeDistribution())
                             commonizeCInteropTask()?.let { task ->
                                 val cinteropCommonizerDependent = CInteropCommonizerDependent.from(metadataCompilation) ?: return@let
                                 add(task.map { it.commonizedOutputLibraries(cinteropCommonizerDependent) })
