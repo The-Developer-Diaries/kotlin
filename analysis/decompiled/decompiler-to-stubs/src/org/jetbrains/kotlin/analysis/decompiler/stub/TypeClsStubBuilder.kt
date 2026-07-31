@@ -13,6 +13,7 @@ import org.jetbrains.kotlin.analysis.decompiler.stub.flags.MODALITY
 import org.jetbrains.kotlin.analysis.decompiler.stub.flags.VISIBILITY
 import org.jetbrains.kotlin.builtins.StandardNames
 import org.jetbrains.kotlin.builtins.isBuiltinFunctionClass
+import org.jetbrains.kotlin.constant.ConstantValue
 import org.jetbrains.kotlin.constant.StringValue
 import org.jetbrains.kotlin.descriptors.annotations.AnnotationUseSiteTarget
 import org.jetbrains.kotlin.lexer.KtModifierKeywordToken
@@ -398,7 +399,7 @@ class TypeClsStubBuilder(private val c: ClsStubBuilderContext) {
             val parameterName = computeParameterName(c.nameResolver.getName(valueParameterProto.name))
             val foldedProperty = foldedProperties[parameterName]
             val hasDefaultValue = Flags.DECLARES_DEFAULT_VALUE.get(valueParameterProto.flags)
-            val foldedInitializer = foldedProperty?.let { c.components.annotationLoader.loadPropertyInitializer(container, it) }
+            val foldedInitializer = foldedProperty?.let { loadDefaultValue(valueParameterProto, container, it) }
             val parameterStub = KotlinParameterStubImpl(
                 parameterParent,
                 name = parameterName.ref(),
@@ -565,6 +566,25 @@ class TypeClsStubBuilder(private val c: ClsStubBuilderContext) {
                 modifierList ?: createEmptyModifierListStub(typeParameterStub)
             )
         }
+    }
+
+    /**
+     * The value the parameter of an annotation constructor defaults to.
+     *
+     * The metadata keeps it on the parameter since version 2.2 (KT-59526). An older library has it on the property
+     * instead, and only when the value happens to be a compile-time constant, which is what the JVM backend writes
+     * as the `AnnotationDefault` attribute of the accessor.
+     */
+    private fun loadDefaultValue(
+        valueParameterProto: ProtoBuf.ValueParameter,
+        container: ProtoContainer,
+        foldedProperty: ProtoBuf.Property,
+    ): ConstantValue<*>? {
+        if (valueParameterProto.hasAnnotationParameterDefaultValue()) {
+            return createConstantValue(valueParameterProto.annotationParameterDefaultValue, c.nameResolver)
+        }
+
+        return c.components.annotationLoader.loadPropertyInitializer(container, foldedProperty)
     }
 
     /**
