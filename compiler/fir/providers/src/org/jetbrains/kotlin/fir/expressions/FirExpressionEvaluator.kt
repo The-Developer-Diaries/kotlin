@@ -796,10 +796,11 @@ private fun evaluateUnary(arg: FirExpression, argType: ConeKotlinType, callableI
     if (arg !is FirLiteralExpression || arg.value == null) return null
 
     val compileTimeType = argType.toCompileTimeType() ?: return null
+    val opr = argType.toConstantValueKind()?.convertToGivenKind(arg.value) ?: arg.value as Any
     return evalUnaryOp(
         callableId.callableName.asString(),
         compileTimeType,
-        arg.value as Any
+        opr
     )
 }
 
@@ -816,6 +817,9 @@ private fun evaluateBinary(
 
     val leftCompileTimeType = leftType.toCompileTimeType() ?: return null
     val rightCompileTimeType = rightType.toCompileTimeType() ?: return null
+
+    val opr1 = leftType.toConstantValueKind()?.convertToGivenKind(arg1.value) ?: arg1.value as Any
+    val opr2 = rightType.toConstantValueKind()?.convertToGivenKind(arg2.value) ?: arg2.value as Any
 
     val functionName = callableId.callableName.asString()
 
@@ -835,9 +839,9 @@ private fun evaluateBinary(
     return evalBinaryOp(
         functionName,
         leftCompileTimeType,
-        arg1.value as Any,
+        opr1,
         rightCompileTimeType,
-        arg2.value as Any
+        opr2
     )
 }
 
