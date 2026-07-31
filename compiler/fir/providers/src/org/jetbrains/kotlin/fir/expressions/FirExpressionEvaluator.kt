@@ -927,6 +927,9 @@ private fun ConstantValueKind.convertToGivenKind(value: Any?): Any? {
             if (value is ULong) value
             else (value as? Number)?.toLong()?.toULong()
         }
+        ConstantValueKind.IntegerLiteral -> {
+            (value as? Number)?.toLong()
+        }
         ConstantValueKind.UnsignedIntegerLiteral -> {
             when (value) {
                 is UInt -> value.toULong()
