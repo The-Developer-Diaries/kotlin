@@ -1,0 +1,6 @@
+p6.Bad:
+  [Delegated]: public open override operator fun equals([EqualityBoundType=p6/I1] other: R|kotlin/Any?|): R|kotlin/Boolean| from Use site scope of p6/Bad [id: 0]
+    [Source]: public abstract override operator fun equals([EqualityBoundType=p6/I1] other: R|kotlin/Any?|): R|kotlin/Boolean| from Use site scope of p6/I1 [id: 1]
+      [Library]: public open operator fun equals(other: R|kotlin/Any?|): R|kotlin/Boolean| from Use site scope of kotlin/Any [id: 2]
+    [Source]: public abstract override operator fun equals([EqualityBoundType=p6/I2] other: R|kotlin/Any?|): R|kotlin/Boolean| from Use site scope of p6/I2 [id: 3]
+      [Library]: public open operator fun equals(other: R|kotlin/Any?|): R|kotlin/Boolean| from Use site scope of kotlin/Any [id: 2]
