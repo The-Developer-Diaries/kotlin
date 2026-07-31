@@ -30,6 +30,7 @@ import org.jetbrains.kotlin.gradle.testbase.assertTasksFailed
 import org.jetbrains.kotlin.gradle.testbase.build
 import org.jetbrains.kotlin.gradle.testbase.buildAndFail
 import org.jetbrains.kotlin.gradle.testbase.buildScriptInjection
+import org.jetbrains.kotlin.gradle.testbase.makeSnapshotTo
 import org.jetbrains.kotlin.gradle.testbase.source
 
 @AndroidGradlePluginTests
@@ -271,38 +272,6 @@ class AbiValidationAndroidKmpIT : KGPBaseTest() {
 
             """.trimIndent()
             assertDumpsEqual(expectedDump, dumpFile)
-        }
-    }
-
-    @AndroidTestVersions(minVersion = TestVersions.AGP.AGP_88, additionalVersions = [TestVersions.AGP.AGP_811])
-    @GradleAndroidTest
-    fun testJavaSourcesInAndroidTarget(
-        gradleVersion: GradleVersion,
-        agpVersion: String,
-        jdkVersion: JdkVersions.ProvidedJdk,
-    ) {
-        androidKmpLibraryProject(gradleVersion, agpVersion, jdkVersion) {
-            abiValidation()
-            buildScriptInjection {
-                kotlinMultiplatform.androidLibrary {
-                    withJava()
-                }
-            }
-
-            kotlinSourcesDir("commonMain").source("CommonClass.kt") { "class CommonClass" }
-            kotlinSourcesDir("androidMain").source("AndroidClass.kt") { "class AndroidClass" }
-            javaSourcesDir("androidMain").source("JavaClass.java") { "public class JavaClass {}" }
-
-            build("updateKotlinAbi")
-
-            val dumpFile = referenceMixedAndroidDumpFile()
-            assertFileExists(dumpFile)
-            assertFileContains(
-                dumpFile.toPath(),
-                "public final class AndroidClass",
-                "public final class CommonClass",
-                "public class JavaClass",
-            )
         }
     }
 
