@@ -11,6 +11,7 @@ import org.jetbrains.kotlin.gradle.plugin.KotlinTargetWithTests
 import org.jetbrains.kotlin.gradle.plugin.diagnostics.KotlinToolingDiagnostics
 import org.jetbrains.kotlin.gradle.plugin.diagnostics.reportDiagnostic
 import org.jetbrains.kotlin.gradle.plugin.launchInStage
+import org.jetbrains.kotlin.gradle.plugin.statistics.KotlinJsBrowserTestMetrics
 import org.jetbrains.kotlin.gradle.targets.KotlinTargetSideEffect
 import org.jetbrains.kotlin.gradle.targets.js.dsl.KotlinBrowserTestRunnerDsl
 import org.jetbrains.kotlin.gradle.targets.js.testing.playwright.KotlinPlaywrightJsTestFramework
@@ -38,6 +39,8 @@ internal val ConfigureKotlinPlaywrightTestRunner = KotlinTargetSideEffect { targ
             project.reportDiagnostic(KotlinToolingDiagnostics.NewJsTestDslNotSupportedForWasmError())
             return@launchInStage
         }
+
+        KotlinJsBrowserTestMetrics.collectMetrics(project, browserTestDsl)
 
         // TODO: KT-86706 Implement different browser runners as independent test runs
         //  so it is aligned with KGP API

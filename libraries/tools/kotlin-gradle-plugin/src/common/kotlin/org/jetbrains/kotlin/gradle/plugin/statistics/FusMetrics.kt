@@ -28,10 +28,13 @@ import org.jetbrains.kotlin.gradle.plugin.launchInStage
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeCompilation
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 import org.jetbrains.kotlin.gradle.report.TaskExecutionResult
+import org.jetbrains.kotlin.gradle.targets.js.dsl.KotlinBrowserTestRunnerDsl
 import org.jetbrains.kotlin.gradle.targets.js.ir.Executable
+import org.jetbrains.kotlin.gradle.targets.js.ir.KotlinJsBrowserTestImpl
 import org.jetbrains.kotlin.gradle.targets.js.ir.KotlinJsIrOutputGranularity
 import org.jetbrains.kotlin.gradle.targets.js.ir.KotlinJsIrTarget
 import org.jetbrains.kotlin.gradle.targets.js.ir.Library
+import org.jetbrains.kotlin.gradle.targets.js.testing.KotlinDefaultJsTestLocation
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompilerExecutionStrategy
 import org.jetbrains.kotlin.gradle.utils.addConfigurationMetrics
 import org.jetbrains.kotlin.gradle.utils.runMetricMethodSafely
@@ -387,6 +390,69 @@ internal object KotlinJsIrTargetMetrics : FusMetrics {
             }
         }
     }
+}
+
+internal object KotlinJsBrowserTestMetrics : FusMetrics {
+    private const val CHROMIUM = "chromium"
+    private const val FIREFOX = "firefox"
+    private const val WEBKIT = "webkit"
+
+    private const val TESTS_LOCATION_OPTION = "testsLocation"
+    private const val TIMEOUT_OPTION = "timeout"
+    private const val HEADLESS_OPTION = "headless"
+    private const val LAUNCH_ARGS_OPTION = "launchArgs"
+    private const val LAUNCH_ENVIRONMENT_VARIABLES_OPTION = "launchEnvironmentVariables"
+    private const val CUSTOM_BROWSER_EXECUTABLE_OPTION = "customBrowserExecutable"
+
+    internal fun collectMetrics(project: Project, browserTestDsl: KotlinJsBrowserTestImpl) {
+        project.launchInStage(KotlinPluginLifecycle.Stage.AfterFinaliseDsl) {
+            val browserTypes = linkedSetOf<String>()
+            val changedOptions = linkedSetOf<String>()
+            var customTestsBundleLocation = false
+
+            runMetricMethodSafely(project.logger, "collectKotlinJsBrowserTestMetrics") {
+                val runnersByBrowserType = listOf(
+                    CHROMIUM to browserTestDsl.chromiumRunners.values,
+                    FIREFOX to browserTestDsl.firefoxRunners.values,
+                    WEBKIT to browserTestDsl.webkitRunners.values,
+                )
+                for ((browserType, runners) in runnersByBrowserType) {
+                    if (runners.isEmpty()) continue
+                    browserTypes.add(browserType)
+                    for (runner in runners) {
+                        if (runner.hasCustomTestsLocation()) {
+                            customTestsBundleLocation = true
+                        }
+                        changedOptions.addAll(runner.optionsChangedFromDefaults())
+                    }
+                }
+            }
+
+            if (browserTypes.isEmpty()) return@launchInStage
+
+            project.addConfigurationMetrics { metricContainer ->
+                metricContainer.put(StringListMetrics.JS_TEST_BROWSER_TYPE, browserTypes.toList())
+                if (changedOptions.isNotEmpty()) {
+                    metricContainer.put(StringListMetrics.JS_TEST_BROWSER_CHANGED_OPTION, changedOptions.toList())
+                }
+                if (customTestsBundleLocation) {
+                    metricContainer.put(BooleanMetrics.JS_TEST_CUSTOM_TESTS_BUNDLE_LOCATION, true)
+                }
+            }
+        }
+    }
+
+    private fun KotlinBrowserTestRunnerDsl.optionsChangedFromDefaults(): List<String> = buildList {
+        if (hasCustomTestsLocation()) add(TESTS_LOCATION_OPTION)
+        if (timeout.get() != KotlinJsBrowserTestImpl.DEFAULT_TIMEOUT) add(TIMEOUT_OPTION)
+        if (headless.get() != KotlinJsBrowserTestImpl.DEFAULT_HEADLESS) add(HEADLESS_OPTION)
+        if (launchArgs.get().isNotEmpty()) add(LAUNCH_ARGS_OPTION)
+        if (launchEnvironmentVariables.get().isNotEmpty()) add(LAUNCH_ENVIRONMENT_VARIABLES_OPTION)
+        if (customBrowserExecutable.isPresent) add(CUSTOM_BROWSER_EXECUTABLE_OPTION)
+    }
+
+    private fun KotlinBrowserTestRunnerDsl.hasCustomTestsLocation(): Boolean =
+        testsLocation.isPresent && testsLocation.get() !is KotlinDefaultJsTestLocation
 }
 
 internal object MultiplatformTargetMetrics : FusMetrics {

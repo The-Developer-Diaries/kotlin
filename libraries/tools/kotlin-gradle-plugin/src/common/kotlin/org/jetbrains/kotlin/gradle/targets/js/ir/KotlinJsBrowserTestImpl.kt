@@ -118,14 +118,19 @@ internal abstract class KotlinJsBrowserTestImpl
     override val testsLocation: Property<KotlinJsTestsLocation> =
         objects.propertyWithConvention<KotlinJsTestsLocation>(defaultTestsLocationProvider)
 
-    override val headless: Property<Boolean> = objects.propertyWithConvention<Boolean>(true)
+    override val headless: Property<Boolean> = objects.propertyWithConvention<Boolean>(DEFAULT_HEADLESS)
 
-    override val timeout: Property<Duration> = objects.propertyWithConvention<Duration>(30L.seconds)
+    override val timeout: Property<Duration> = objects.propertyWithConvention<Duration>(DEFAULT_TIMEOUT)
 
     private fun connectTopLevelConfigDslWithBrowserTestDsl(browserLevelDsl: KotlinBrowserTestRunnerDsl) {
         browserLevelDsl.testsLocation.convention(testsLocation)
         browserLevelDsl.headless.convention(headless)
         browserLevelDsl.timeout.convention(timeout)
         browserLevelDsl.launchEnvironmentVariables.convention(launchEnvironmentVariables)
+    }
+
+    internal companion object {
+        internal const val DEFAULT_HEADLESS: Boolean = true
+        internal val DEFAULT_TIMEOUT: Duration = 30L.seconds
     }
 }

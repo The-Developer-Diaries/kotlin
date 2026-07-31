@@ -5,13 +5,19 @@
 
 package org.jetbrains.kotlin.gradle
 
+import org.gradle.api.file.Directory
 import org.gradle.api.logging.LogLevel
+import org.gradle.api.provider.Provider
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.InputDirectory
+import org.gradle.api.tasks.Internal
 import org.gradle.kotlin.dsl.kotlin
 import org.gradle.kotlin.dsl.version
 import org.gradle.testkit.runner.BuildResult
 import org.gradle.util.GradleVersion
 import org.jetbrains.kotlin.buildtools.api.ExperimentalBuildToolsApi
 import org.jetbrains.kotlin.gradle.report.BuildReportType
+import org.jetbrains.kotlin.gradle.targets.js.dsl.KotlinJsTestsLocation
 import org.jetbrains.kotlin.gradle.testbase.*
 import org.jetbrains.kotlin.gradle.testbase.BuildOptions.IsolatedProjectsMode
 import org.jetbrains.kotlin.gradle.uklibs.applyMultiplatform
@@ -25,10 +31,12 @@ import org.jetbrains.kotlin.statistics.metrics.StringAnonymizationPolicy
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.condition.OS
 import org.junit.jupiter.api.io.TempDir
+import java.net.URI
 import java.nio.file.Path
 import kotlin.io.path.*
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import kotlin.time.Duration.Companion.minutes
 
 @DisplayName("FUS statistic")
 class FusStatisticsIT : KGPBaseTest() {
@@ -553,6 +561,96 @@ class FusStatisticsIT : KGPBaseTest() {
         }
     }
 
+    @JsGradlePluginTests
+    @DisplayName("browser test DSL configured with default options")
+    @GradleTest
+    @OptIn(ExperimentalJsTestDsl::class)
+    fun testJsBrowserTestDslWithDefaultOptions(gradleVersion: GradleVersion) {
+        project(
+            "empty",
+            gradleVersion,
+            // KT-75899 Support Gradle Project Isolation in KGP JS & Wasm
+            buildOptions = defaultBuildOptions.disableIsolatedProjectsBecauseOfJsAndWasmKT75899(),
+        ) {
+            addKgpToBuildScriptCompilationClasspath()
+            buildScriptInjection {
+                project.applyMultiplatform {
+                    js().browser {
+                        test.apply {
+                            chromium()
+                        }
+                    }
+                }
+                project.tasks.register("doNothing")
+            }
+
+            assertNoErrorFilesCreated {
+                build("doNothing", "-Pkotlin.session.logger.root.path=$projectPath") {
+                    assertOutputDoesNotContainFusErrors()
+                    fusStatisticsDirectory.assertFusReportContainsMetricWithValues("JS_TEST_BROWSER_TYPE", listOf("chromium"))
+                    fusStatisticsDirectory.assertFusReportDoesNotContain(
+                        "JS_TEST_BROWSER_CHANGED_OPTION",
+                        "JS_TEST_CUSTOM_TESTS_BUNDLE_LOCATION",
+                    )
+                }
+            }
+        }
+    }
+
+    @JsGradlePluginTests
+    @DisplayName("browser test DSL configured with options changed from defaults")
+    @GradleTest
+    @OptIn(ExperimentalJsTestDsl::class)
+    fun testJsBrowserTestDslWithChangedOptions(gradleVersion: GradleVersion) {
+        project(
+            "empty",
+            gradleVersion,
+            // KT-75899 Support Gradle Project Isolation in KGP JS & Wasm
+            buildOptions = defaultBuildOptions.disableIsolatedProjectsBecauseOfJsAndWasmKT75899(),
+        ) {
+            addKgpToBuildScriptCompilationClasspath()
+            buildScriptInjection {
+                project.applyMultiplatform {
+                    js().browser {
+                        test.apply {
+                            headless.set(false)
+                            @OptIn(DelicateKotlinGradlePluginApi::class)
+                            testsLocation.set(
+                                CustomJsTestsLocation(
+                                    bundleLocation = project.layout.buildDirectory.dir("custom-tests-bundle"),
+                                    testHtmlFileName = project.provider { "custom-test.html" },
+                                )
+                            )
+                            chromium {
+                                it.timeout.set(1.minutes)
+                                it.launchArgs.set(listOf("--no-sandbox"))
+                                it.launchEnvironmentVariables.put("KOTLIN_JS_TEST_VARIABLE", "42")
+                            }
+                            firefox()
+                        }
+                    }
+                }
+                project.tasks.register("doNothing")
+            }
+
+            assertNoErrorFilesCreated {
+                build("doNothing", "-Pkotlin.session.logger.root.path=$projectPath") {
+                    assertOutputDoesNotContainFusErrors()
+                    fusStatisticsDirectory.assertFusReportContainsMetricWithValues(
+                        "JS_TEST_BROWSER_TYPE",
+                        listOf("chromium", "firefox")
+                    )
+                    // the values are reported in the alphabetical order
+                    fusStatisticsDirectory.assertFusReportContainsMetricWithValues(
+                        "JS_TEST_BROWSER_CHANGED_OPTION",
+                        listOf("headless", "launchArgs", "launchEnvironmentVariables", "testsLocation", "timeout")
+                    )
+                    fusStatisticsDirectory.assertFusReportContains("JS_TEST_CUSTOM_TESTS_BUNDLE_LOCATION=true")
+                }
+            }
+        }
+    }
+
     @DisplayName("native compiler arguments")
     @GradleTest
     @NativeGradlePluginTests
@@ -868,4 +966,16 @@ private fun BuildResult.assertOutputDoesNotContainFusErrors() {
 private fun Path.assertFusReportContainsMetricWithValues(metricName: String, expectedValues: List<String>) {
     assertFilesCombinedContains(filterKotlinFusFiles(), "$metricName=${expectedValues.joinToString(",")}")
     assertFilesCombinedContains(filterBackwardCompatibilityKotlinFusFiles(), "$metricName=${expectedValues.joinToString(";")}")
+}
+
+@OptIn(ExperimentalJsTestDsl::class)
+internal class CustomJsTestsLocation(
+    @get:InputDirectory
+    override val bundleLocation: Provider<Directory>,
+    @get:Input
+    override val testHtmlFileName: Provider<String>,
+) : KotlinJsTestsLocation {
+    @OptIn(DelicateKotlinGradlePluginApi::class)
+    @get:Internal
+    override val url: Provider<URI> = bundleLocation.map { it.asFile.resolve(testHtmlFileName.get()).toURI() }
 }

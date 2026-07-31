@@ -79,6 +79,9 @@ enum class BooleanMetrics(val type: BooleanOverridePolicy, val anonymization: Bo
 
     JS_LONG_AS_BIGINT(OR, SAFE),
 
+    // the default location of the bundle with Kotlin/JS browser tests was replaced with a custom one
+    JS_TEST_CUSTOM_TESTS_BUNDLE_LOCATION(OR, SAFE),
+
     WASM_IR_INCREMENTAL(OR, SAFE),
 
     //Garbage collector
@@ -142,6 +145,6 @@ enum class BooleanMetrics(val type: BooleanOverridePolicy, val anonymization: Bo
     ;
 
     companion object {
-        const val VERSION = 29
+        const val VERSION = 30
     }
 }
