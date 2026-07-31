@@ -28,7 +28,7 @@ internal data class LightweightFileInfo(
 /**
  * Package and top-level type names via Java lexer, without a parse.
  * For PSI error-tolerant parity, tolerates a missing package `;` and unmatched closing braces/parentheses.
- * Modelled after `SingleJavaFileRootsIndex` TODO: merge implementations (KT-57845)
+ * Modelled after `SingleJavaFileRootsIndex` TODO: merge implementations (KT-88100)
  */
 internal fun extractFileInfoLightweight(file: File): LightweightFileInfo? {
     val fileContent = readJavaSourceFileText(file) ?: return null
@@ -66,10 +66,9 @@ internal fun extractFileInfoLightweight(file: File): LightweightFileInfo? {
         val name = StringBuilder()
         advance()
         loop@ while (!end() && !at(JavaSyntaxTokenType.SEMICOLON)) {
-            val type = lexer.getTokenType()
-            when {
-                type == JavaSyntaxTokenType.IDENTIFIER || type == JavaSyntaxTokenType.DOT -> name.append(lexer.getTokenText())
-                type == SyntaxTokenTypes.WHITE_SPACE || type in JavaSyntaxDefinition.comments -> Unit
+            when (lexer.getTokenType()) {
+                JavaSyntaxTokenType.IDENTIFIER, JavaSyntaxTokenType.DOT -> name.append(lexer.getTokenText())
+                SyntaxTokenTypes.WHITE_SPACE, in JavaSyntaxDefinition.comments -> Unit
                 else -> break@loop
             }
             advance()
