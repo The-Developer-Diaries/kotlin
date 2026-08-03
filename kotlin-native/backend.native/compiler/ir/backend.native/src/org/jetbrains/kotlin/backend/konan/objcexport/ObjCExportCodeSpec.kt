@@ -36,13 +36,12 @@ internal fun ObjCExportedInterface.createCodeSpec(symbolTable: SymbolTable): Obj
     }
 
     fun List<CallableMemberDescriptor>.toObjCMethods() = createObjCMethods(this.flatMap {
-        when {
-            !mapper.shouldBeExposed(it) -> emptyList()
-            it is PropertyDescriptor -> listOfNotNull(
+        when (it) {
+            is PropertyDescriptor -> listOfNotNull(
                     it.getter,
                     it.setter?.takeIf(mapper::shouldBeExposed) // Similar to [ObjCExportTranslatorImpl.buildProperty].
             )
-            it is FunctionDescriptor -> listOf(it)
+            is FunctionDescriptor -> listOf(it)
             else -> error(it)
         }
     })
