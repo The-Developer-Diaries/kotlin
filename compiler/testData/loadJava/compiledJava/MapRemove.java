@@ -1,3 +1,5 @@
+// FULL_JDK
+
 package test;
 
 import java.util.Map;

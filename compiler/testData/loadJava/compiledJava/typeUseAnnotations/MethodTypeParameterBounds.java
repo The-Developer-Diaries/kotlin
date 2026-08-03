@@ -1,4 +1,4 @@
-// LANGUAGE: +TypeEnhancementImprovementsInStrictMode
+// FULL_JDK
 
 package test;
 

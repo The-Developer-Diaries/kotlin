@@ -1,4 +1,4 @@
-// JAVAC_OPTIONS: -parameters
+// FULL_JDK
 
 package test;
 

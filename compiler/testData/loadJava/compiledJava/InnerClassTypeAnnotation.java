@@ -1,4 +1,5 @@
-// JAVAC_EXPECTED_FILE
+// FULL_JDK
+
 package test;
 
 import java.lang.annotation.ElementType;

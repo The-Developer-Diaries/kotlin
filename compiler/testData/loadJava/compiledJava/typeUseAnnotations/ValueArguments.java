@@ -1,15 +1,26 @@
-// LANGUAGE: +TypeEnhancementImprovementsInStrictMode
+// FULL_JDK
+// FILE: test/G0.java
+package test;
 
+interface G0 { }
+
+// FILE: test/G1.java
+package test;
+
+interface G1<T> { }
+
+// FILE: test/G2.java
+package test;
+
+interface G2<A, B> { }
+
+// FILE: test/ValueArguments.java
 package test;
 
 import org.jetbrains.annotations.*;
 
-interface G0 { }
-interface G1<T> { }
-interface G2<A, B> { }
-
 interface ValueArguments {
-    // simplpe type arguments
+    // simple type arguments
     void f0(G1<@NotNull G0> p);
     void f1(G1<G1<G1<G1<@NotNull G0>>>> p);
     void f2(G1<@NotNull String> p);
@@ -36,7 +47,7 @@ interface ValueArguments {
     void f17(@Nullable Integer @Nullable [] p);
     void f18(@Nullable int @Nullable [] p1, Integer @Nullable [] p2, @Nullable int [] p3);
 
-    // multidementional arrays
+    // multi-dimensional arrays
     void f19(Integer @NotNull [] [] p);
     void f20(int @NotNull [] @NotNull [] p);
     void f21(@NotNull Integer [] [] [] p);

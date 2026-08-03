@@ -1,16 +1,38 @@
-// LANGUAGE: +TypeEnhancementImprovementsInStrictMode
+// FULL_JDK
+// FILE: test/I1.java
+package test;
 
+interface I1<T> {}
+
+// FILE: test/I2.java
+package test;
+
+interface I2<T, K> {}
+
+// FILE: test/I3.java
+package test;
+
+interface I3<T, K, L> {}
+
+// FILE: test/A1.java
+package test;
+
+class A1<T> {}
+
+// FILE: test/A2.java
+package test;
+
+class A2<T, K> {}
+
+// FILE: test/A3.java
+package test;
+
+class A3<T, K, L> {}
+
+// FILE: test/BaseClassTypeArguments.java
 package test;
 
 import org.jetbrains.annotations.*;
-
-interface I1<T> {}
-interface I2<T, K> {}
-interface I3<T, K, L> {}
-
-class A1<T> {}
-class A2<T, K> {}
-class A3<T, K, L> {}
 
 public class BaseClassTypeArguments<B> extends A3<@NotNull B [][][][][], I1<I1<@NotNull int @NotNull [][]>>, A2<B, int [] [] @NotNull []>> implements I1<@NotNull Integer @NotNull [][][]>, I2<@NotNull B, B>, I3<@NotNull B [][][][][], B, @NotNull B> {
     class Basic1 implements I1<@NotNull String> { }

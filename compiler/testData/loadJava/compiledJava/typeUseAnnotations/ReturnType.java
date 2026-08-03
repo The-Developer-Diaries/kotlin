@@ -1,15 +1,26 @@
-// LANGUAGE: +TypeEnhancementImprovementsInStrictMode
+// FULL_JDK
+// FILE: test/G0.java
+package test;
 
+interface G0 { }
+
+// FILE: test/G1.java
+package test;
+
+interface G1<T> { }
+
+// FILE: test/G2.java
+package test;
+
+interface G2<A, B> { }
+
+// FILE: test/ReturnType.java
 package test;
 
 import org.jetbrains.annotations.*;
 
-interface G0 { }
-interface G1<T> { }
-interface G2<A, B> { }
-
 interface ReturnType {
-    // simplpe type arguments
+    // simple type arguments
     G1<@NotNull G0> f0();
     G1<G1<G1<G1<@NotNull G0>>>> f1();
     G1<@NotNull String> f2();
@@ -37,7 +48,7 @@ interface ReturnType {
     @NotNull Integer @NotNull [] f17();
     @NotNull int @NotNull [] f18 = null;
 
-    // multidementional arrays
+    // multi-dimensional arrays
     Integer @NotNull [] [] f19();
     int @NotNull [] @NotNull [] f20();
     @NotNull Integer [] [] [] f21 = null;
