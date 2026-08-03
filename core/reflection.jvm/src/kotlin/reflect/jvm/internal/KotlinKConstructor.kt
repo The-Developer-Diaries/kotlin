@@ -10,6 +10,8 @@ import kotlin.jvm.internal.CallableReference
 import kotlin.metadata.*
 import kotlin.metadata.jvm.JvmMethodSignature
 import kotlin.metadata.jvm.signature
+import kotlin.reflect.ExperimentalCompanionExtensions
+import kotlin.reflect.KClass
 import kotlin.reflect.KType
 import kotlin.reflect.KVisibility
 import kotlin.reflect.full.createDefaultType
@@ -44,6 +46,9 @@ internal class KotlinKConstructor(
     override val isInfix: Boolean get() = false
 
     override val isPrimaryConstructor: Boolean get() = !kmConstructor.isSecondary
+
+    @ExperimentalCompanionExtensions
+    override val companionExtensionClass: KClass<*>? get() = null
 
     override fun shallowCopy(container: KDeclarationContainerImpl, overriddenStorage: KCallableOverriddenStorage): ReflectKCallable<Any?> {
         require(overriddenStorage == KCallableOverriddenStorage.EMPTY) { "Constructors cannot have fake overrides: $this" }
