@@ -173,7 +173,8 @@ object FirExpressionEvaluator {
 
         // Convert literal expression to the variable's type
         val expectedType = variable?.returnTypeRef?.coneType ?: return evaluated
-        return expression.value?.adjustTypeAndConvertToResult(expression, expectedType) ?: evaluated
+        val resultWithAdjustedType = expression.value.adjustTypeAndConvertToResult(expression, expectedType)
+        return resultWithAdjustedType as? Evaluated ?: evaluated
     }
 
     private inline fun <T> FirCallableSymbol<*>.visit(block: () -> T): T {
