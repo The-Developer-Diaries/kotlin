@@ -20,7 +20,9 @@ tasks.withType<Test>().configureEach {
     val smokeTestConfig = smokeTestConfig
 
     /* If the task itself is marked as 'isSmokeTest', then it always has to be fully executed */
-    val testFederationMode = project.testFederationMode
+    val testFederationMode: Provider<TestFederationMode> =
+        smokeTestConfig.filter { it == SmokeTestConfig.RunAllTests }.map { TestFederationMode.Full }
+            .orElse(project.testFederationMode)
 
     inputs.property(TEST_FEDERATION_MODE_KEY, testFederationMode)
     inputs.property(SMOKE_TEST_CONFIG_KEY, smokeTestConfig)
