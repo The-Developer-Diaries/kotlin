@@ -90,7 +90,9 @@ internal class WasmUsefulDeclarationProcessor(
                 call.typeArguments[0]?.enqueueRuntimeClassOrAny(from, "intrinsic ${call.symbol.owner.name}")
                 true
             }
-            in context.wasmSymbols.coroutinesStackSwitchingIntrinsics?.suspendFunctionToContref ?: emptyList() -> {
+            context.wasmSymbols.coroutinesStackSwitchingIntrinsics?.suspendFunction0ToContref,
+            context.wasmSymbols.coroutinesStackSwitchingIntrinsics?.suspendFunction1ToContref,
+            context.wasmSymbols.coroutinesStackSwitchingIntrinsics?.suspendFunction2ToContref -> {
                 val classType = call.arguments[0]!!.type
                 classType.classOrFail.functions.singleOrNull {
                     it.owner.name.asString() == "invoke"

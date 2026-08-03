@@ -49,11 +49,19 @@ class BuiltInsLowering(val context: WasmBackendContext) : FileLoweringPass {
     private fun generateStartCoroutineUninterceptedOrReturnIntrinsic(
         call: IrCall,
         builder: DeclarationIrBuilder,
-        arity: Int,
     ): IrExpression {
+        val arity = call.arguments.size - 2
         if (context.wasmUseStackSwitching) {
             val stackSwitchingIntrinsics = symbols.coroutinesStackSwitchingIntrinsics!!
-            val wasmCont = builder.irCall(stackSwitchingIntrinsics.suspendFunctionToContrefImpl[arity]).apply {
+
+            val suspendFunctionToContrefImpl = when (arity) {
+                0 -> stackSwitchingIntrinsics.suspendFunction0ToContrefImpl
+                1 -> stackSwitchingIntrinsics.suspendFunction1ToContrefImpl
+                2 -> stackSwitchingIntrinsics.suspendFunction2ToContrefImpl
+                else -> error("Unsupported suspend function arity: $arity")
+            }
+
+            val wasmCont = builder.irCall(suspendFunctionToContrefImpl).apply {
                 copyTypeAndValueArgumentsFrom(call)
             }
             return builder.irCall(stackSwitchingIntrinsics.resumeWithImpl).apply {
@@ -200,14 +208,10 @@ class BuiltInsLowering(val context: WasmBackendContext) : FileLoweringPass {
                     }
                 }
             }
-            symbols.startCoroutineUninterceptedOrReturnIntrinsic0 ->
-                return generateStartCoroutineUninterceptedOrReturnIntrinsic(call, builder, arity = 0)
-
-            symbols.startCoroutineUninterceptedOrReturnIntrinsic1 ->
-                return generateStartCoroutineUninterceptedOrReturnIntrinsic(call, builder, arity = 1)
-
+            symbols.startCoroutineUninterceptedOrReturnIntrinsic0,
+            symbols.startCoroutineUninterceptedOrReturnIntrinsic1,
             symbols.startCoroutineUninterceptedOrReturnIntrinsic2 ->
-                return generateStartCoroutineUninterceptedOrReturnIntrinsic(call, builder, arity = 2)
+                return generateStartCoroutineUninterceptedOrReturnIntrinsic(call, builder)
 
             // For State Machine:   (cont as? CoroutineImpl)?.intercepted() ?: cont
             // For Stack Switching: (cont as? CoroutineImplStackSwitching<*, *>)?.intercepted() ?: cont
