@@ -1018,7 +1018,7 @@ class BodyGenerator(
     ) {
         val suspendFunctionClassType = function.parameters[0].type
         val suspendFunctionInvoke = irBuiltIns.suspendFunctionN(invokeArity).getSimpleFunction("invoke")!!
-        val contType = typeCodegenContext.referenceContType(invokeArity)
+        val contType = typeCodegenContext.referenceContType(invokeArity + 2)
         val bindContType = typeCodegenContext.referenceContType(0)
 
         body.buildGetLocal(functionContext.referenceLocal(0), location)
@@ -1337,11 +1337,11 @@ class BodyGenerator(
             // converting `invoke` into wasm continuation - cont.new
             // passing coroutine object as the first argument of `invoke` - cont.bind
             wasmSymbols.coroutinesStackSwitchingIntrinsics?.suspendFunction0ToContref ->
-                generateSuspendFunToContref(function, invokeArity = 2, location)
+                generateSuspendFunToContref(function, invokeArity = 0, location)
             wasmSymbols.coroutinesStackSwitchingIntrinsics?.suspendFunction1ToContref ->
-                generateSuspendFunToContref(function, invokeArity = 3, location)
+                generateSuspendFunToContref(function, invokeArity = 1, location)
             wasmSymbols.coroutinesStackSwitchingIntrinsics?.suspendFunction2ToContref ->
-                generateSuspendFunToContref(function, invokeArity = 4, location)
+                generateSuspendFunToContref(function, invokeArity = 2, location)
 
             wasmSymbols.wasmArrayCopy -> {
                 val immediate = typeCodegenContext.referenceGcType(call.typeArguments[0]!!.getRuntimeClass(irBuiltIns).symbol)
