@@ -130,6 +130,9 @@ fun ObjCExportMapper.shouldBeExposed(descriptor: CallableMemberDescriptor): Bool
     // KT-42641. Don't expose componentN methods of data classes
     // because they are useless in Objective-C/Swift.
     isComponentNMethod(descriptor) && descriptor.overriddenDescriptors.isEmpty() -> false
+    descriptor.contextReceiverParameters.isNotEmpty() -> false
+    @OptIn(K1Deprecation::class)
+    descriptor.isDeserializedAndHasCompanionExtensionReceiver -> false
     descriptor.isHiddenFromObjC() -> false
     !entryPoints.shouldBeExposed(descriptor) -> false
     else -> true
@@ -138,12 +141,9 @@ fun ObjCExportMapper.shouldBeExposed(descriptor: CallableMemberDescriptor): Bool
 private fun AnnotationDescriptor.hidesFromObjC(): Boolean =
     annotationClass?.annotations?.any { it.fqName == KonanFqNames.hidesFromObjC } ?: false
 
-@OptIn(K1Deprecation::class)
 private fun CallableMemberDescriptor.isHiddenFromObjC(): Boolean = when {
     // Note: the front-end checker requires all overridden descriptors to be either refined or not refined.
     overriddenDescriptors.isNotEmpty() -> overriddenDescriptors.first().isHiddenFromObjC()
-    contextReceiverParameters.isNotEmpty() -> true
-    isDeserializedAndHasCompanionExtensionReceiver -> true
     else -> annotations.any(AnnotationDescriptor::hidesFromObjC)
 }
 
