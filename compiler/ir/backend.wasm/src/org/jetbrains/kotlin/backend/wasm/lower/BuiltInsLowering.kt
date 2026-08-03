@@ -46,29 +46,30 @@ class BuiltInsLowering(val context: WasmBackendContext) : FileLoweringPass {
         return klass.functions.single { it.isEqualsInheritedFromAny() }
     }
 
-    private fun generateStartCoroutineUninterceptedOrReturnIntrinsic(
+    private fun generateStartCoroutineUninterceptedOrReturnIntrinsicStackSwitching(
+        arity: Int,
+        builder: DeclarationIrBuilder,
+    ): IrExpression {
+        val stackSwitchingIntrinsics = symbols.coroutinesStackSwitchingIntrinsics!!
+
+        val suspendFunctionToContrefImpl = when (arity) {
+            0 -> stackSwitchingIntrinsics.suspendFunction0ToContrefImpl
+            1 -> stackSwitchingIntrinsics.suspendFunction1ToContrefImpl
+            2 -> stackSwitchingIntrinsics.suspendFunction2ToContrefImpl
+            else -> error("Unsupported suspend function arity: $arity")
+        }
+
+        val wasmCont = builder.irCall(suspendFunctionToContrefImpl)
+        return builder.irCall(stackSwitchingIntrinsics.resumeWithImpl).apply {
+            arguments[0] = wasmCont
+        }
+    }
+
+    private fun generateStartCoroutineUninterceptedOrReturnIntrinsicStateMachine(
+        arity: Int,
         call: IrCall,
         builder: DeclarationIrBuilder,
     ): IrExpression {
-        val arity = call.arguments.size - 2
-        if (context.wasmUseStackSwitching) {
-            val stackSwitchingIntrinsics = symbols.coroutinesStackSwitchingIntrinsics!!
-
-            val suspendFunctionToContrefImpl = when (arity) {
-                0 -> stackSwitchingIntrinsics.suspendFunction0ToContrefImpl
-                1 -> stackSwitchingIntrinsics.suspendFunction1ToContrefImpl
-                2 -> stackSwitchingIntrinsics.suspendFunction2ToContrefImpl
-                else -> error("Unsupported suspend function arity: $arity")
-            }
-
-            val wasmCont = builder.irCall(suspendFunctionToContrefImpl).apply {
-                copyTypeAndValueArgumentsFrom(call)
-            }
-            return builder.irCall(stackSwitchingIntrinsics.resumeWithImpl).apply {
-                arguments[0] = wasmCont
-            }
-        }
-
         val createSymbol = symbols.coroutinesStateMachineIntrinsics!!.createSimpleCoroutineFromSuspendFunction
         val createdCoroutine = builder.irCall(createSymbol).apply {
             typeArguments[0] = call.typeArguments.last()  // T
@@ -210,8 +211,13 @@ class BuiltInsLowering(val context: WasmBackendContext) : FileLoweringPass {
             }
             symbols.startCoroutineUninterceptedOrReturnIntrinsic0,
             symbols.startCoroutineUninterceptedOrReturnIntrinsic1,
-            symbols.startCoroutineUninterceptedOrReturnIntrinsic2 ->
-                return generateStartCoroutineUninterceptedOrReturnIntrinsic(call, builder)
+            symbols.startCoroutineUninterceptedOrReturnIntrinsic2 -> {
+                val arity = call.arguments.size - 2
+                return if (context.wasmUseStackSwitching)
+                    generateStartCoroutineUninterceptedOrReturnIntrinsicStackSwitching(arity, builder)
+                else
+                    generateStartCoroutineUninterceptedOrReturnIntrinsicStateMachine(arity, call, builder)
+            }
 
             // For State Machine:   (cont as? CoroutineImpl)?.intercepted() ?: cont
             // For Stack Switching: (cont as? CoroutineImplStackSwitching<*, *>)?.intercepted() ?: cont
