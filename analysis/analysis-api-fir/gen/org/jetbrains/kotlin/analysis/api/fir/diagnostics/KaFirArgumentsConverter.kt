@@ -199,7 +199,7 @@ private fun convertArgument(argument: WhenMissingCase, firSymbolBuilder: KaSymbo
 }
 
 private fun convertArgument(argument: ConeReceiverInfo, firSymbolBuilder: KaSymbolByFirBuilder): Any? {
-    return argument
+    return firSymbolBuilder.typeBuilder.buildKtType(argument.type)
 }
 
 private fun convertArgument(argument: Map<*, *>, firSymbolBuilder: KaSymbolByFirBuilder): Any? {

@@ -4566,7 +4566,7 @@ private fun KaDiagnosticConverterBuilder.addConversions102() {
         UnresolvedReferenceImpl(
             firDiagnostic.a,
             firDiagnostic.b,
-            firDiagnostic.c,
+            firDiagnostic.c?.let { firSymbolBuilder.typeBuilder.buildKtType(it.type) },
             firDiagnostic as KtPsiDiagnostic,
             token,
         )
