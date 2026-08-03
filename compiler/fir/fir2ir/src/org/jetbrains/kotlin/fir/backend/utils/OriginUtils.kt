@@ -145,6 +145,12 @@ internal fun FirReference.statementOrigin(): IrStatementOrigin? = when (this) {
                 null
         }
 
+        else if (source?.kind == KtFakeSourceElementKind.ImplicitContextParameterArgument ||
+                source?.kind == KtFakeSourceElementKind.ImplicitThisReceiverExpression ||
+                source?.kind == KtFakeSourceElementKind.ImplicitReceiver ||
+                source?.kind is KtFakeSourceElementKind.ScriptParameter.ImplicitReceiver)
+            -> IrStatementOrigin.IMPLICIT_ARGUMENT
+
         else -> null
     }
 

@@ -3,6 +3,8 @@
 // FUNCTION: context2Assert
 // DUMP_KT_IR
 
+// ISSUE: KT-88179
+
 fun box(): String = runAll(
     "test1" to { test1() },
     "test2" to { test2() },
@@ -21,13 +23,13 @@ fun context2Assert(condition: Boolean, msg: Any? = null) {
 }
 
 fun test1() {
-    with(Asserter) {
+    context(Asserter) {
         context1Assert("test".length == 5)
     }
 }
 
 fun test2() {
-    with(Asserter) {
+    context(Asserter) {
         context2Assert("test".length == 5)
     }
 }
